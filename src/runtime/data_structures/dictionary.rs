@@ -7,13 +7,39 @@ use crate::runtime::data_structures::contextual_data::ContextualData;
 
 
 #[derive(Clone)]
+pub enum WordRuntime
+{
+    Immediate,
+    Normal
+}
+
+
+#[derive(Clone)]
+pub enum WordType
+{
+    Native,
+    Scripted
+}
+
+
+#[derive(Clone)]
+pub enum WordVisibility
+{
+    Visible,
+    Hidden
+}
+
+
+#[derive(Clone)]
 pub struct WordInfo
 {
-    pub is_immediate: bool,
-    pub is_scripted: bool,
-    pub is_hidden: bool,
+    pub runtime: WordRuntime,
+    pub word_type: WordType,
+    pub visibility: WordVisibility,
+
     pub description: String,
     pub signature: String,
+
     pub handler_index: usize
 }
 
@@ -24,9 +50,9 @@ impl WordInfo
     {
         WordInfo
             {
-                is_immediate: false,
-                is_scripted: false,
-                is_hidden: false,
+                runtime: WordRuntime::Normal,
+                word_type: WordType::Native,
+                visibility: WordVisibility::Visible,
                 description: String::new(),
                 signature: String::new(),
                 handler_index: 0
@@ -119,7 +145,7 @@ impl Display for Dictionary
                 max_size = size;
             }
 
-            if !item.1.is_hidden
+            if let WordVisibility::Visible = item.1.visibility
             {
                 visible_words += 1;
             }
@@ -134,7 +160,7 @@ impl Display for Dictionary
         {
             let word = &merged[*key];
 
-            if word.is_hidden == false
+            if let WordVisibility::Visible = word.visibility
             {
                 string_result = string_result +
                                 &format!("{:width$}  {:6}",
@@ -144,7 +170,7 @@ impl Display for Dictionary
 
                 string_result = string_result +
                     {
-                        if word.is_immediate
+                        if let WordRuntime::Immediate = word.runtime
                         {
                             "  immediate"
                         }
