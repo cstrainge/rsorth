@@ -377,41 +377,51 @@ fn is_number(text: &String) -> bool
 }
 
 
-fn to_numeric(location: &SourceLocation, text: &String) -> error::Result<NumberType>
+fn to_numeric(text: &String) -> Option<NumberType>
 {
-    fn check_numeric_error<T, E>(location: &SourceLocation,
-                                 result: &Result<T, E>,
-                                 original: &String) -> error::Result<()>
+    fn check_numeric_error<T, E>(result: &Result<T, E>) -> Option<()>
         where
             E: Display
     {
-        if let Err(err) = result
+        if let Err(_) = result
         {
-            let message = format!("Could not parse numeric value from '{}', {}.", original, err);
-            return ScriptError::new_as_result(Some(location.clone()), message, None);
+            return None;
         }
 
-        Ok(())
+        Some(())
     }
 
-    let numeric;
+    let result =
+        if text.starts_with("0x")
+        {
+            let result = i64::from_str_radix(&text[2..].replace("_", ""), 16);
 
-    if text.find('.').is_some()
-    {
-        let result = text.parse();
+            check_numeric_error(&result)?;
+            Some(NumberType::Int(result.ok()?))
+        }
+        else if text.starts_with("0b")
+        {
+            let result = i64::from_str_radix(&text[2..].replace("_", ""), 2);
 
-        check_numeric_error(location, &result, text)?;
-        numeric = NumberType::Float(result.unwrap());
-    }
-    else
-    {
-        let result = text.parse();
+            check_numeric_error(&result)?;
+            Some(NumberType::Int(result.ok()?))
+        }
+        else if text.contains('.')
+        {
+            let result = text.replace("_", "").parse();
 
-        check_numeric_error(location, &result, text)?;
-        numeric = NumberType::Int(result.unwrap());
-    }
+            check_numeric_error(&result)?;
+            Some(NumberType::Int(result.ok()?))
+        }
+        else
+        {
+            let result = text.replace("_", "").parse();
 
-    Ok(numeric)
+            check_numeric_error(&result)?;
+            Some(NumberType::Int(result.ok()?))
+        };
+
+    result
 }
 
 
@@ -448,7 +458,7 @@ pub fn tokenize_from_source(path: &String, source: &String) -> error::Result<Tok
                 _ if is_string => Token::String(location, text),
                 _ if is_number(&text) =>
                     {
-                        if let Ok(number) = to_numeric(&location, &text)
+                        if let Some(number) = to_numeric(&text)
                         {
                             Token::Number(location, number)
                         }
