@@ -1,6 +1,8 @@
 
-use crate::{ lang::{ code::{ ByteCode, CodeConstructor },
-                     source_buffer::SourceLocation },
+use crate::{ lang::{ code::ByteCode,
+                     compilation::{ CodeConstructor, CodeConstructorList },
+                     source_buffer::SourceLocation,
+                    tokenizing::TokenList },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
@@ -23,7 +25,7 @@ use crate::{ lang::{ code::{ ByteCode, CodeConstructor },
 
 pub type SearchPaths = Vec<String>;
 
-pub type WordList = Vec<WordHandlerInfo>;
+pub type WordList = ContextualList<WordHandlerInfo>;
 
 
 
@@ -41,15 +43,32 @@ pub struct SorthInterpreter
     dictionary: Dictionary,
     word_handlers: WordList,
 
-    variables: ContextualList<Value>
+    variables: VariableList,
+
+    constructors: CodeConstructorList
 }
 
 
 impl Interpreter for SorthInterpreter
 {
-    fn add_search_path(&mut self, path: &String)
+    fn add_search_path(&mut self, path: &String) -> error::Result<()>
     {
         self.search_paths.push(path.clone());
+        Ok(())
+    }
+
+    fn add_search_path_for_file(&mut self, _file_path: &String) -> error::Result<()>
+    {
+        Ok(())
+    }
+
+    fn drop_search_path(&mut self)
+    {
+    }
+
+    fn find_file(&self, _path: &String) -> error::Result<String>
+    {
+        Ok(String::new())
     }
 
     fn variables(&self) -> &VariableList
@@ -69,6 +88,7 @@ impl ContextualData for SorthInterpreter
     fn mark_context(&mut self)
     {
         self.dictionary.mark_context();
+        self.word_handlers.mark_context();
         self.data_definitions.mark_context();
         self.variables.mark_context();
     }
@@ -76,6 +96,7 @@ impl ContextualData for SorthInterpreter
     fn release_context(&mut self)
     {
         self.dictionary.release_context();
+        self.word_handlers.release_context();
         self.data_definitions.release_context();
         self.variables.release_context();
     }
@@ -128,17 +149,30 @@ impl InterpreterStack for SorthInterpreter
 
 impl CodeManagement for SorthInterpreter
 {
-    fn code_constructor(&mut self) -> Option<&CodeConstructor>
+    fn context_new(&mut self, _tokens: TokenList)
     {
-        None
     }
 
-    fn process_source_file(_path: &String) -> error::Result<()>
+    fn context_drop(&mut self)
+    {
+    }
+
+    fn context(&self) -> &CodeConstructor
+    {
+        &self.constructors[0]
+    }
+
+    fn context_mut(&mut self) -> &mut CodeConstructor
+    {
+        &mut self.constructors[0]
+    }
+
+    fn process_source_file(&mut self, _path: &String) -> error::Result<()>
     {
         Ok(())
     }
 
-    fn process_source(_path: &String, _source: &String) -> error::Result<()>
+    fn process_source(&mut self, _path: &String, _source: &String) -> error::Result<()>
     {
         Ok(())
     }
@@ -161,12 +195,12 @@ impl WordManagement for SorthInterpreter
     {
     }
 
-    fn find_word(&self, _word: &String) -> Option<&WordInfo>
+    fn find_word(&self, _word: &String) -> Option<WordInfo>
     {
         None
     }
 
-    fn word_handler_info(&self, _index: usize) -> Option<&WordHandlerInfo>
+    fn word_handler_info(&self, _index: usize) -> Option<WordHandlerInfo>
     {
         None
     }
@@ -176,17 +210,23 @@ impl WordManagement for SorthInterpreter
         Vec::new()
     }
 
-    fn execute_word(_location: &Option<SourceLocation>, _word: &WordInfo) -> error::Result<()>
+    fn execute_word(&mut self,
+                    _location: &Option<SourceLocation>,
+                    _word: &WordInfo) -> error::Result<()>
     {
         Ok(())
     }
 
-    fn execute_word_named(_location: &Option<SourceLocation>, _word: &String) -> error::Result<()>
+    fn execute_word_named(&mut self,
+                          _location: &Option<SourceLocation>,
+                          _word: &String) -> error::Result<()>
     {
         Ok(())
     }
 
-    fn execute_word_index(_location: &Option<SourceLocation>, _index: usize) -> error::Result<()>
+    fn execute_word_index(&mut self,
+                          _location: &Option<SourceLocation>,
+                          _index: usize) -> error::Result<()>
     {
         Ok(())
     }
@@ -221,7 +261,9 @@ impl SorthInterpreter
                 dictionary: Dictionary::new(),
                 word_handlers: WordList::new(),
 
-                variables: VariableList::new()
+                variables: VariableList::new(),
+
+                constructors: CodeConstructorList::new()
             }
     }
 }

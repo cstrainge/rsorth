@@ -1,6 +1,8 @@
 
-use crate::{ lang::{ code::{ ByteCode, CodeConstructor },
-                     source_buffer::SourceLocation },
+use crate::{ lang::{ code::ByteCode,
+                     compilation::CodeConstructor,
+                     source_buffer::SourceLocation,
+                     tokenizing::TokenList },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::DataObjectPtr,
@@ -50,16 +52,21 @@ pub trait InterpreterStack
 
 pub trait CodeManagement
 {
-    fn code_constructor(&mut self) -> Option<&CodeConstructor>;
+    fn context_new(&mut self, tokens: TokenList);
+    fn context_drop(&mut self);
 
-    fn process_source_file(path: &String) -> error::Result<()>;
-    fn process_source(path: &String, source: &String) -> error::Result<()>;
+    fn context(&self) -> &CodeConstructor;
+    fn context_mut(&mut self) -> &mut CodeConstructor;
+
+    fn process_source_file(&mut self, path: &String) -> error::Result<()>;
+    fn process_source(&mut self, path: &String, source: &String) -> error::Result<()>;
 
     fn execute_code(&mut self, name: &String, code: &ByteCode) -> error::Result<()>;
 }
 
 
 
+#[derive(Clone)]
 pub struct WordHandlerInfo
 {
     name: String,
@@ -75,13 +82,19 @@ pub trait WordManagement
 
     fn add_word(&self);
 
-    fn find_word(&self, word: &String) -> Option<&WordInfo>;
-    fn word_handler_info(&self, index: usize) -> Option<&WordHandlerInfo>;
+    fn find_word(&self, word: &String) -> Option<WordInfo>;
+    fn word_handler_info(&self, index: usize) -> Option<WordHandlerInfo>;
     fn inverse_name_list(&self) -> Vec<String>;
 
-    fn execute_word(location: &Option<SourceLocation>, word: &WordInfo) -> error::Result<()>;
-    fn execute_word_named(location: &Option<SourceLocation>, word: &String) -> error::Result<()>;
-    fn execute_word_index(location: &Option<SourceLocation>, index: usize) -> error::Result<()>;
+    fn execute_word(&mut self,
+                    location: &Option<SourceLocation>,
+                    word: &WordInfo) -> error::Result<()>;
+    fn execute_word_named(&mut self,
+                          location: &Option<SourceLocation>,
+                          word: &String) -> error::Result<()>;
+    fn execute_word_index(&mut self,
+                          location: &Option<SourceLocation>,
+                          index: usize) -> error::Result<()>;
 
     fn call_stack(&self) -> &CallStack;
 }
@@ -106,7 +119,11 @@ pub trait Interpreter : ContextualData +
                         WordManagement +
                         ThreadManagement
 {
-    fn add_search_path(&mut self, path: &String);
+    fn add_search_path(&mut self, path: &String) -> error::Result<()>;
+    fn add_search_path_for_file(&mut self, file_path: &String) -> error::Result<()>;
+    fn drop_search_path(&mut self);
+
+    fn find_file(&self, path: & String) -> error::Result<String>;
 
     fn variables(&self) -> &VariableList;
     fn dictionary(&self) -> &Dictionary;

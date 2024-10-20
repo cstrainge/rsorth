@@ -4,6 +4,8 @@ use std::{ error::Error,
 use crate::{ runtime::interpreter::CallStack,
              lang::source_buffer::SourceLocation };
 
+use super::interpreter::Interpreter;
+
 
 
 pub type Result<T> = std::result::Result<T, ScriptError>;
@@ -81,4 +83,21 @@ impl ScriptError
     {
         &self.call_stack
     }
+}
+
+
+
+pub fn script_error<T>(interpreter: &dyn Interpreter, message: &String) -> Result<T>
+{
+    let location = interpreter.current_location().clone();
+    let call_stack = interpreter.call_stack().clone();
+
+    ScriptError::new_as_result(location, message.to_string(), Some(call_stack))
+}
+
+
+
+pub fn script_error_str<T>(interpreter: &dyn Interpreter, message: &str) -> Result<T>
+{
+    script_error(interpreter, &message.to_string())
 }

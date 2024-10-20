@@ -1,6 +1,9 @@
 
+use std::{ fmt::{ self, Display, Formatter },
+           hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::SourceLocation,
-             runtime::data_structures::value::Value };
+             runtime::{ interpreter::Interpreter,
+                        data_structures::value::Value } };
 
 
 
@@ -12,8 +15,6 @@ pub enum Op
     ReadVariable,
     WriteVariable,
     Execute(Value),
-    WordIndex(Value),
-    WordExists(Value),
     PushConstantValue(Value),
     MarkLoopExit(Value),
     UnmarkLoopExit,
@@ -31,6 +32,67 @@ pub enum Op
 
 
 
+impl PartialEq for Op
+{
+    fn eq(&self, other: &Self) -> bool
+    {
+        match ( self, other )
+        {
+            ( Op::DefVariable(a),       Op::DefVariable(b)       ) => a == b,
+            ( Op::DefConstant(a),       Op::DefConstant(b)       ) => a == b,
+            ( Op::ReadVariable,         Op::ReadVariable         ) => true,
+            ( Op::WriteVariable,        Op::WriteVariable        ) => true,
+            ( Op::Execute(a),           Op::Execute(b)           ) => a == b,
+            ( Op::PushConstantValue(a), Op::PushConstantValue(b) ) => a == b,
+            ( Op::MarkLoopExit(a),      Op::MarkLoopExit(b)      ) => a == b,
+            ( Op::UnmarkLoopExit,       Op::UnmarkLoopExit       ) => true,
+            ( Op::MarkCatch(a),         Op::MarkCatch(b)         ) => a == b,
+            ( Op::UnmarkCatch,          Op::UnmarkCatch          ) => true,
+            ( Op::MarkContext,          Op::MarkContext          ) => true,
+            ( Op::ReleaseContext,       Op::ReleaseContext       ) => true,
+            ( Op::Jump(a),              Op::Jump(b)              ) => a == b,
+            ( Op::JumpIfZero(a),        Op::JumpIfZero(b)        ) => a == b,
+            ( Op::JumpIfNotZero(a),     Op::JumpIfNotZero(b)     ) => a == b,
+            ( Op::JumpLoopStart,        Op::JumpLoopStart        ) => true,
+            ( Op::JumpLoopExit,         Op::JumpLoopExit         ) => true,
+            ( Op::JumpTarget(a),        Op::JumpTarget(b)        ) => a == b,
+
+            _ => false
+        }
+    }
+}
+
+
+impl Hash for Op
+{
+    fn hash<H: Hasher>(&self, state: &mut H)
+    {
+        match self
+        {
+            Op::DefVariable(value)       => {  0.hash(state); value.hash(state); },
+            Op::DefConstant(value)       => {  1.hash(state); value.hash(state); },
+            Op::ReadVariable             =>    2.hash(state),
+            Op::WriteVariable            =>    3.hash(state),
+            Op::Execute(value)           => {  4.hash(state); value.hash(state); },
+            Op::PushConstantValue(value) => {  7.hash(state); value.hash(state); },
+            Op::MarkLoopExit(value)      => {  8.hash(state); value.hash(state); },
+            Op::UnmarkLoopExit           =>    9.hash(state),
+            Op::MarkCatch(value)         => { 10.hash(state); value.hash(state); },
+            Op::UnmarkCatch              =>   11.hash(state),
+            Op::MarkContext              =>   12.hash(state),
+            Op::ReleaseContext           =>   13.hash(state),
+            Op::Jump(value)              => { 14.hash(state); value.hash(state); },
+            Op::JumpIfZero(value)        => { 15.hash(state); value.hash(state); },
+            Op::JumpIfNotZero(value)     => { 16.hash(state); value.hash(state); },
+            Op::JumpLoopStart            =>   17.hash(state),
+            Op::JumpLoopExit             =>   18.hash(state),
+            Op::JumpTarget(value)        => { 19.hash(state); value.hash(state); }
+        }
+    }
+}
+
+
+
 #[derive(Clone)]
 pub struct Instruction
 {
@@ -40,11 +102,72 @@ pub struct Instruction
 
 
 
+impl Display for Instruction
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result
+    {
+        fn flt(value: &Value) -> String
+        {
+            match value
+            {
+                Value::String(text) => Value::stringify(&text),
+                _ => format!("{}", value)
+            }
+        }
+
+        fn jt(value: &Value) -> String
+        {
+            match value
+            {
+                Value::None => "".to_string(),
+                _ => format!("{}", value)
+            }
+        }
+
+        match &self.op
+        {
+            Op::DefVariable(value)       => write!(f, "DefVariable       {}", value),
+            Op::DefConstant(value)       => write!(f, "DefConstant       {}", value),
+            Op::ReadVariable             => write!(f, "ReadVariable"),
+            Op::WriteVariable            => write!(f, "WriteVariable"),
+            Op::Execute(value)           => write!(f, "Execute           {}", value),
+            Op::PushConstantValue(value) => write!(f, "PushConstantValue {}", flt(&value)),
+            Op::MarkLoopExit(value)      => write!(f, "MarkLoopExit      {}", value),
+            Op::UnmarkLoopExit           => write!(f, "UnmarkLoopExit"),
+            Op::MarkCatch(value)         => write!(f, "MarkCatch         {}", value),
+            Op::UnmarkCatch              => write!(f, "UnmarkCatch"),
+            Op::MarkContext              => write!(f, "MarkContext"),
+            Op::ReleaseContext           => write!(f, "ReleaseContext"),
+            Op::Jump(value)              => write!(f, "Jump              {}", value),
+            Op::JumpIfZero(value)        => write!(f, "JumpIfZero        {}", value),
+            Op::JumpIfNotZero(value)     => write!(f, "JumpIfNotZero     {}", value),
+            Op::JumpLoopStart            => write!(f, "JumpLoopStart"),
+            Op::JumpLoopExit             => write!(f, "JumpLoopExit"),
+            Op::JumpTarget(value)        => write!(f, "JumpTarget        {}", jt(&value)),
+        }
+    }
+}
+
+
+
 pub type ByteCode = Vec<Instruction>;
 
 
 
-pub struct CodeConstructor
+impl Instruction
 {
-    //
+    pub fn new(location: Option<SourceLocation>, op: Op) -> Instruction
+    {
+        Instruction
+            {
+                location,
+                op
+            }
+    }
+}
+
+
+
+pub fn pretty_print_code(_interpreter: &dyn Interpreter, _code: &ByteCode)
+{
 }

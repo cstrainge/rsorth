@@ -80,7 +80,7 @@ pub enum Token
 }
 
 
-type TokenList = Vec<Token>;
+pub type TokenList = Vec<Token>;
 
 
 impl PartialEq for Token
@@ -428,7 +428,7 @@ fn to_numeric(text: &String) -> Option<NumberType>
 pub fn tokenize_from_source(path: &String, source: &String) -> error::Result<TokenList>
 {
     let mut buffer = SourceBuffer::new(path, source);
-    let mut token_list = Vec::new();
+    let mut token_list = TokenList::new();
 
     while let Some(next) = buffer.peek_next()
     {
