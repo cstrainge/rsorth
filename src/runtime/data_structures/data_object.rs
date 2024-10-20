@@ -3,10 +3,11 @@ use std::{ fmt::{ self, Display, Formatter },
            rc::Rc,
            cell::RefCell,
            hash::{ Hash, Hasher } };
-use crate::runtime::data_structures::value::{ Value,
-                                              value_format_indent,
-                                              value_format_indent_inc,
-                                              value_format_indent_dec };
+use crate::runtime::data_structures::{ contextual_list::ContextualList,
+                                       value::{ Value,
+                                                value_format_indent,
+                                                value_format_indent_inc,
+                                                value_format_indent_dec } };
 
 
 
@@ -20,6 +21,8 @@ pub struct DataObjectDefinition
 
 
 pub type DataObjectDefinitionPtr = Rc<RefCell<DataObjectDefinition>>;
+
+pub type DataDefinitionList = ContextualList<DataObjectDefinitionPtr>;
 
 
 
