@@ -2,7 +2,7 @@
 use std::{ cell::RefCell,
            fmt::{ self, Display, Formatter },
            hash::{ Hash, Hasher } };
-use crate::{ lang::tokenizing::NumberType,
+use crate::{ lang::tokenizing::{ NumberType, Token },
              runtime::{ data_structures::data_object::DataObjectPtr,
                         error::{ self, script_error },
                         interpreter::Interpreter } };
@@ -17,7 +17,8 @@ pub enum Value
     Float(f64),
     Bool(bool),
     String(String),
-    DataObject(DataObjectPtr)
+    DataObject(DataObjectPtr),
+    Token(Token)
 }
 
 
@@ -40,17 +41,70 @@ impl Default for Value
 
 impl PartialEq for Value
 {
-    fn eq(&self, _other: &Value) -> bool
+    fn eq(&self, other: &Value) -> bool
     {
-        false
+        if Value::both_are_numeric(self, other)
+        {
+            if Value::either_is_float(self, other)
+            {
+                let a = self.get_float_val().unwrap();
+                let b = self.get_float_val().unwrap();
+
+                a == b
+            }
+            else if Value::either_is_int(self, other)
+            {
+                let a = self.get_int_val().unwrap();
+                let b = self.get_int_val().unwrap();
+
+                a == b
+            }
+            else if Value::either_is_bool(self, other)
+            {
+                let a = self.get_bool_val().unwrap();
+                let b = other.get_bool_val().unwrap();
+
+                a == b
+            }
+            else
+            {
+                false
+            }
+        }
+        else if self.is_string_like() && other.is_string_like()
+        {
+            let a = self.get_string_val().unwrap();
+            let b = other.get_string_val().unwrap();
+
+            a == b
+        }
+        else
+        {
+            match ( self, other )
+            {
+                ( Value::DataObject(a), Value::DataObject(b) ) => *a.borrow() == *b.borrow(),
+                ( Value::Token(a),      Value::Token(b)      ) => a == b,
+                _                                              => false
+            }
+        }
     }
 }
 
 
 impl Hash for Value
 {
-    fn hash<H: Hasher>(&self, _state: &mut H)
+    fn hash<H: Hasher>(&self, state: &mut H)
     {
+        match self
+        {
+            Value::None              => 0.hash(state),
+            Value::Int(value)        => value.hash(state),
+            Value::Float(value)      => value.to_bits().hash(state),
+            Value::Bool(value)       => value.hash(state),
+            Value::String(value)     => value.hash(state),
+            Value::DataObject(value) => value.borrow().hash(state),
+            Value::Token(value)      => value.hash(state)
+        }
     }
 }
 
@@ -66,7 +120,8 @@ impl Display for Value
             Value::Float(value)      => write!(f, "{}", value),
             Value::Bool(value)       => write!(f, "{}", value),
             Value::String(value)     => write!(f, "{}", value),
-            Value::DataObject(value) => write!(f, "{}", value.borrow())
+            Value::DataObject(value) => write!(f, "{}", value.borrow()),
+            Value::Token(value)      => write!(f, "{}", value)
         }
     }
 }
@@ -124,14 +179,6 @@ macro_rules! value_conversion
 
 
 
-value_conversion!(i64, Int, as_int);
-value_conversion!(f64, Float, as_float);
-value_conversion!(bool, Bool, as_bool);
-value_conversion!(String, String, as_string);
-value_conversion!(DataObjectPtr, DataObject, as_data_object);
-
-
-
 impl ToValue for NumberType
 {
     fn to_value(&self) -> Value
@@ -140,6 +187,163 @@ impl ToValue for NumberType
         {
             NumberType::Int(value)   => Value::Int(*value),
             NumberType::Float(value) => Value::Float(*value)
+        }
+    }
+}
+
+
+
+value_conversion!(i64,           Int,        as_int);
+value_conversion!(f64,           Float,      as_float);
+value_conversion!(bool,          Bool,       as_bool);
+value_conversion!(String,        String,     as_string);
+value_conversion!(DataObjectPtr, DataObject, as_data_object);
+value_conversion!(Token,         Token,      as_token);
+
+
+
+macro_rules! is_variant
+{
+    ($name:ident , $either_name:ident , $variant:ident) =>
+    {
+        pub fn $name(&self) -> bool
+        {
+            if let Value::$variant(ref _value) = self
+            {
+                true
+            }
+            else
+            {
+                false
+            }
+        }
+
+        pub fn $either_name(a: &Value, b: &Value) -> bool
+        {
+            a.$name() || b.$name()
+        }
+    };
+}
+
+
+
+impl Value
+{
+    is_variant!(is_int,         either_is_int,         Int);
+    is_variant!(is_float,       either_is_float,       Float);
+    is_variant!(is_bool,        either_is_bool,        Bool);
+    is_variant!(is_data_object, either_is_data_object, DataObject);
+
+    pub fn is_numeric(&self) -> bool
+    {
+        match self
+        {
+            Value::None                 => true,
+            Value::Int(_)               => true,
+            Value::Float(_)             => true,
+            Value::Bool(_)              => true,
+            Value::Token(token) =>
+                match token
+                {
+                    Token::Number(_, _) => true,
+                    _                   => false
+                }
+            _                           => false
+        }
+    }
+
+    pub fn both_are_numeric(a: &Value, b: &Value) -> bool
+    {
+        a.is_numeric() && b.is_numeric()
+    }
+
+    pub fn is_string_like(&self) -> bool
+    {
+        match self
+        {
+            Value::String(_)            => true,
+            Value::Token(token) =>
+                match token
+                {
+                    Token::String(_, _) => true,
+                    Token::Word(_, _)   => true,
+                    _                   => false
+                }
+            _                           => false
+        }
+    }
+
+    pub fn get_string_val(&self) -> Option<String>
+    {
+        match self
+        {
+            Value::String(value)            => Some(value.clone()),
+            Value::Token(token) =>
+                match token
+                {
+                    Token::String(_, value) => Some(value.clone()),
+                    Token::Word(_, word)    => Some(word.clone()),
+                    _                       => None
+                }
+            _                               => None
+        }
+    }
+
+    pub fn get_bool_val(&self) -> Option<bool>
+    {
+        match self
+        {
+            Value::None         => Some(false),
+            Value::Int(value)   => Some(*value != 0),
+            Value::Float(value) => Some(*value != 0.0),
+            Value::Bool(value)  => Some(*value),
+            _                   => None
+        }
+    }
+
+    pub fn get_int_val(&self) -> Option<i64>
+    {
+        match self
+        {
+            Value::None                              => Some(0),
+            Value::Int(value)                        => Some(*value),
+            Value::Float(value)                      => Some(*value as i64),
+            Value::Bool(value)                       => Some(if *value { 1 } else { 0 }),
+            Value::Token(token) =>
+                match token
+                {
+                    Token::Number(_, num_type) =>
+                        match num_type
+                        {
+                            NumberType::Int(value)   => Some(*value),
+                            NumberType::Float(value) => Some(*value as i64)
+                        }
+                    _                                => None
+                }
+            _                                        => None
+        }
+    }
+
+    pub fn get_float_val(&self) -> Option<f64>
+    {
+        match self
+        {
+            Value::None                              => Some(0.0),
+            Value::Int(value)                        => Some(*value as f64),
+            Value::Float(value)                      => Some(*value),
+            Value::Bool(value)                       => Some(if *value { 1.0 } else { 0.0 }),
+            Value::Token(token) =>
+                match token
+                {
+                    Token::Number(_, num_type) =>
+                        match num_type
+                        {
+                            NumberType::Int(value)   => Some(*value as f64),
+                            NumberType::Float(value) => Some(*value)
+                        }
+                    _                                => None
+                }
+            _                                        => None
         }
     }
 }

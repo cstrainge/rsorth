@@ -40,12 +40,12 @@ pub trait InterpreterStack
 
     fn push(&mut self, value: &Value);
 
-    fn pop(&mut self) -> Value;
-    fn pop_as_int(&mut self) -> i64;
-    fn pop_as_float(&mut self) -> f64;
-    fn pop_as_bool(&mut self) -> bool;
-    fn pop_as_string(&mut self) -> String;
-    fn pop_as_data_object(&mut self) -> DataObjectPtr;
+    fn pop(&mut self) -> error::Result<Value>;
+    fn pop_as_int(&mut self) -> error::Result<i64>;
+    fn pop_as_float(&mut self) -> error::Result<f64>;
+    fn pop_as_bool(&mut self) -> error::Result<bool>;
+    fn pop_as_string(&mut self) -> error::Result<String>;
+    fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>;
 }
 
 

@@ -6,11 +6,10 @@ use crate::{ lang::{ code::ByteCode,
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
-                                                          DataObject,
                                                           DataObjectPtr },
                                            dictionary::{ Dictionary, WordInfo },
                                            value::Value },
-                        error,
+                        error::{ self, script_error_str },
                         interpreter::{ CallStack,
                                        CodeManagement,
                                        Interpreter,
@@ -110,39 +109,81 @@ impl InterpreterStack for SorthInterpreter
         &self.stack
     }
 
-    fn push(&mut self, _value: &Value)
+    fn push(&mut self, value: &Value)
     {
-        //
+        self.stack.push(value.clone());
     }
 
-    fn pop(&mut self) -> Value
+    fn pop(&mut self) -> error::Result<Value>
     {
-        Value::default()
+        let item = self.stack.pop();
+
+        if let None = item
+        {
+            script_error_str(self, "Stack underflow.")?;
+        }
+
+        Ok(item.unwrap())
     }
 
-    fn pop_as_int(&mut self) -> i64
+    fn pop_as_int(&mut self) -> error::Result<i64>
     {
-        0
+        let value = self.pop()?;
+
+        if !value.is_numeric()
+        {
+            script_error_str(self, "Expected numeric value.")?;
+        }
+
+        Ok(value.get_int_val().unwrap())
     }
 
-    fn pop_as_float(&mut self) -> f64
+    fn pop_as_float(&mut self) -> error::Result<f64>
     {
-        0.0
+        let value = self.pop()?;
+
+        if !value.is_numeric()
+        {
+            script_error_str(self, "Expected numeric value.")?;
+        }
+
+        Ok(value.get_float_val().unwrap())
     }
 
-    fn pop_as_bool(&mut self) -> bool
+    fn pop_as_bool(&mut self) -> error::Result<bool>
     {
-        false
+        let value = self.pop()?;
+
+        if !value.is_numeric()
+        {
+            script_error_str(self, "Expected boolean value.")?;
+        }
+
+        Ok(value.get_bool_val().unwrap())
     }
 
-    fn pop_as_string(&mut self) -> String
+    fn pop_as_string(&mut self) -> error::Result<String>
     {
-        String::new()
+        let value = self.pop()?;
+
+        if !value.is_string_like()
+        {
+            script_error_str(self, "Expected a string value.")?;
+        }
+
+        Ok(value.get_string_val().unwrap())
     }
 
-    fn pop_as_data_object(&mut self) -> DataObjectPtr
+    fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>
     {
-        DataObject::new(&self.data_definitions[0])
+        let value = self.pop()?;
+
+        if !value.is_data_object()
+        {
+            script_error_str(self, "Expected a string value.")?;
+        }
+
+        Ok(value.as_data_object(self)?.clone())
     }
 }
 
