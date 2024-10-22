@@ -363,16 +363,19 @@ impl Value
             match character
             {
                 '"'  => result.push_str("\\\""),
-                '\n' => result.push_str("\\\n"),
-                '\r' => result.push_str("\\\r"),
-                '\t' => result.push_str("\\\t"),
-                '\\' => result.push_str("\\\\"),
+                '\n' => result.push_str("\\n"),
+                '\r' => result.push_str("\\r"),
+                '\t' => result.push_str("\\t"),
+                '\\' => result.push_str("\\"),
                 _    => result.push(character)
             }
         }
 
+        result.push('"');
+
         result
     }
+
 }
 
 

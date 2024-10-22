@@ -3,7 +3,8 @@ use std::{ fmt::{ self, Debug, Display, Formatter },
            fs::read_to_string,
            hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::{ SourceBuffer, SourceLocation },
-             runtime::error::{self, ScriptError} };
+             runtime::{ data_structures::value::Value,
+                        error::{ self, ScriptError } } };
 
 
 
@@ -148,8 +149,9 @@ impl Debug for Token
         match self
         {
             Token::Number(location, num)    => write!(f, "{}: {:?}", location, num),
-            Token::String(location, string) => write!(f, "{}: {:?}", location, string),
-            Token::Word(location, string)   => write!(f, "{}: {:?}", location, string)
+            Token::String(location, string) => write!(f, "{}: {}", location,
+                                                                   Value::stringify(string)),
+            Token::Word(location, string)   => write!(f, "{}: {}", location, string)
         }
     }
 }
@@ -250,22 +252,22 @@ fn process_multi_line_string(location: &SourceLocation,
     let target_column = buffer.location().column();
     let mut text = String::new();
 
-    while let Some(next) = buffer.peek_next()
+    while let Some(next) = buffer.next()
     {
         match next
         {
             '*' =>
                 {
-                    if let Some(next) = buffer.peek_next()
+                    if let Some(quote) = buffer.peek_next()
                     {
-                        if next == '"'
+                        if quote == '"'
                         {
                             let _ = buffer.next();
                             break;
                         }
                         else
                         {
-                            text.push(next);
+                            text.push('*');
                         }
                     }
                     else
@@ -294,7 +296,10 @@ fn process_multi_line_string(location: &SourceLocation,
                     }
                 }
 
-            _ => text.push(next)
+            _ =>
+                {
+                    text.push(next);
+                }
         }
     }
 
@@ -309,7 +314,6 @@ fn process_string(buffer: &mut SourceBuffer) -> error::Result<( SourceLocation, 
     let mut text = String::new();
 
     assert!(next == '"');
-    let _ = buffer.next();
 
     if buffer.peek_next() == Some('*')
     {
@@ -368,6 +372,12 @@ fn is_number(text: &String) -> bool
         return false;
     }
 
+    if    text.starts_with("0x")
+       || text.starts_with("0b")
+    {
+        return true;
+    }
+
     text.chars().all(|c|    c.is_digit(16)
                          || c == '.'
                          || c == '-'
@@ -411,7 +421,7 @@ fn to_numeric(text: &String) -> Option<NumberType>
             let result = text.replace("_", "").parse();
 
             check_numeric_error(&result)?;
-            Some(NumberType::Int(result.ok()?))
+            Some(NumberType::Float(result.ok()?))
         }
         else
         {

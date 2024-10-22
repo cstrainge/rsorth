@@ -188,7 +188,7 @@ impl InterpreterStack for SorthInterpreter
 
         if !value.is_data_object()
         {
-            script_error_str(self, "Expected a string value.")?;
+            script_error_str(self, "Expected a data object.")?;
         }
 
         Ok(value.as_data_object(self)?.clone())
@@ -197,45 +197,39 @@ impl InterpreterStack for SorthInterpreter
 }
 
 
+// Helper methods for the interpreter instruction handling.
 impl SorthInterpreter
 {
     fn define_variable(&mut self, value: &Value) -> error::Result<()>
     {
+        // Get the name, and an index that will represent the variable.
         let name = value.get_string_val();
         let index = self.variables.insert(Value::default());
 
+        // Were we successful in getting the name?
         match name
         {
             Some(name) =>
                 {
+                    // Create a new handler that will access the variable by index.
                     let handler = move |interpreter: &mut dyn Interpreter|
                     {
                         interpreter.push(&(index as i64).to_value());
                         Ok(())
                     };
 
-                    /*add_native_word!(self,
+                    add_native_word!(self,
                                      name,
                                      handler,
                                      format!("Access the index for variable {}.", name),
-                                     " -- variable_index");*/
-
-                    use std::rc::Rc;
-
-                    self.add_word(file!().to_string(), line!() as usize, column!() as usize,
-                                 name.to_string(),
-                                 Rc::new(handler),
-                                 format!("Access the index for variable {}.", name).to_string(),
-                                 " -- variable_index".to_string(),
-                                 WordRuntime::Immediate,
-                                 WordVisibility::Visible,
-                                 WordType::Native);
+                                     " -- variable_index");
                     Ok(())
                 }
 
             None =>
                 {
-                    script_error_str(self, "Invalid variable name.")?;
+                    // Looks like the instruction encoded an incompatible type of value.
+                    script_error(self, format!("Invalid variable name {}.", value))?;
                     Ok(())
                 }
         }
@@ -243,13 +237,16 @@ impl SorthInterpreter
 
     fn define_constant(&mut self, value: &Value) -> error::Result<()>
     {
+        // Get the name, and the new constant value.
         let name = value.get_string_val();
         let constant = self.pop()?;
 
+        // Were we successful in getting the name?
         match name
         {
             Some(name) =>
                 {
+                    // Create a new handler that will push the constant value onto the stack.
                     let handler = move |interpreter: &mut dyn Interpreter|
                     {
                         interpreter.push(&constant.deep_clone());
@@ -266,7 +263,8 @@ impl SorthInterpreter
 
             None =>
                 {
-                    script_error_str(self, "Invalid constant name.")?;
+                    // Looks like the instruction encoded an incompatible type of value.
+                    script_error(self, format!("Invalid constant name {}.", value))?;
                     Ok(())
                 }
         }
@@ -312,6 +310,8 @@ impl SorthInterpreter
     {
         let location = self.current_location.clone();
 
+        // Execute the value based on it's type.  It can either be a string name, or an index to the
+        // handler.  Any other value type is invalid.
         match value
         {
             Value::String(word_name) =>
@@ -650,7 +650,7 @@ impl CodeManagement for SorthInterpreter
                 {
                     if call_stack_pushed
                     {
-                        let _ = self.call_stack.pop();
+                        self.call_stack_pop()?;
                     }
 
                     cleanup_contexts(self, contexts, false)?;
@@ -659,7 +659,7 @@ impl CodeManagement for SorthInterpreter
             }
             else if call_stack_pushed
             {
-                let _ = self.call_stack.pop();
+                self.call_stack_pop()?;
                 call_stack_pushed = false;
             }
 
@@ -756,9 +756,15 @@ impl WordManagement for SorthInterpreter
         self.call_stack.push(CallItem::new(name.clone(), location));
     }
 
-    fn call_stack_pop(&mut self)
+    fn call_stack_pop(&mut self) -> error::Result<()>
     {
-        //
+        if self.call_stack.is_empty()
+        {
+            script_error_str(self, "Call stack underflow.")?;
+        }
+
+        self.call_stack.pop();
+        Ok(())
     }
 }
 

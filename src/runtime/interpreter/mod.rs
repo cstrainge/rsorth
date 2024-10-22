@@ -241,7 +241,7 @@ pub trait WordManagement
     fn call_stack(&self) -> &CallStack;
 
     fn call_stack_push(&mut self, name: String, location: SourceLocation);
-    fn call_stack_pop(&mut self);
+    fn call_stack_pop(&mut self) -> error::Result<()>;
 }
 
 
