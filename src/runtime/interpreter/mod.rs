@@ -1,4 +1,5 @@
 
+use std::{ fmt::{ self, Display, Formatter }, rc::Rc };
 use crate::{ lang::{ code::ByteCode,
                      compilation::CodeConstructor,
                      source_buffer::SourceLocation,
@@ -6,7 +7,11 @@ use crate::{ lang::{ code::ByteCode,
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::DataObjectPtr,
-                                           dictionary::{ Dictionary, WordInfo },
+                                           dictionary::{ Dictionary,
+                                                         WordInfo,
+                                                         WordRuntime,
+                                                         WordType,
+                                                         WordVisibility },
                                            value::Value },
                          error } };
 
@@ -20,8 +25,40 @@ pub mod sub_interpreter;
 #[derive(Clone)]
 pub struct CallItem
 {
-    pub location: SourceLocation,
-    pub word: String
+    location: SourceLocation,
+    word: String
+}
+
+
+impl CallItem
+{
+    pub fn new(word: String, location: SourceLocation) -> CallItem
+    {
+        CallItem
+            {
+                location,
+                word
+            }
+    }
+
+    pub fn location(&self) -> &SourceLocation
+    {
+        &self.location
+    }
+
+    pub fn word(&self) -> &String
+    {
+        &self.word
+    }
+}
+
+
+impl Display for CallItem
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result
+    {
+        write!(f, "{}: {}", self.location, self.word)
+    }
 }
 
 
@@ -66,12 +103,107 @@ pub trait CodeManagement
 
 
 
+pub type WordHandler = dyn Fn(&mut dyn Interpreter) -> error::Result<()>;
+
+
+
 #[derive(Clone)]
 pub struct WordHandlerInfo
 {
     name: String,
     location: SourceLocation,
-    handler: usize
+    handler: Rc<WordHandler>
+}
+
+
+impl WordHandlerInfo
+{
+    pub fn new(name: String, location: SourceLocation, handler: Rc<WordHandler>) -> WordHandlerInfo
+    {
+        WordHandlerInfo
+            {
+                name,
+                location,
+                handler
+            }
+    }
+
+    pub fn name(&self) -> &String
+    {
+        &self.name
+    }
+
+    pub fn location(&self) -> &SourceLocation
+    {
+        &self.location
+    }
+
+    pub fn handler(&self) -> Rc<WordHandler>
+    {
+        self.handler.clone()
+    }
+}
+
+
+
+#[macro_export]
+macro_rules! add_native_word
+{
+    ( $interpreter:expr ,
+      $name:expr ,
+      $function:expr ,
+      $description:expr ,
+      $signature:expr) =>
+    {
+        {
+            use std::rc::Rc;
+            use crate::runtime::data_structures::dictionary::{ WordRuntime,
+                                                               WordVisibility,
+                                                               WordType };
+
+            $interpreter.add_word(file!().to_string(),
+                                  line!() as usize,
+                                  column!() as usize,
+                                  $name.to_string(),
+                                  Rc::new($function),
+                                  $description.to_string(),
+                                  $signature.to_string(),
+                                  WordRuntime::Normal,
+                                  WordVisibility::Visible,
+                                  WordType::Native);
+        }
+    };
+}
+
+
+
+#[macro_export]
+macro_rules! add_native_immediate_word
+{
+    ( $interpreter:expr ,
+      $name:literal ,
+      $function:expr ,
+      $description:literal ,
+      $signature:literal) =>
+    {
+        {
+            use std::rc::Rc;
+            use crate::runtime::data_structures::dictionary::{ WordRuntime,
+                                                               WordVisibility,
+                                                               WordType };
+
+            interpreter.add_word(file!().to_string(),
+                                 line!() as usize,
+                                 column!() as usize,
+                                 $name.to_string(),
+                                 Rc::new($function),
+                                 $description.to_string(),
+                                 $signature.to_string(),
+                                 WordRuntime::Immediate,
+                                 WordVisibility::Visible,
+                                 WordType::Native);
+        }
+    };
 }
 
 
@@ -80,7 +212,17 @@ pub trait WordManagement
 {
     fn current_location(&self) -> &Option<SourceLocation>;
 
-    fn add_word(&self);
+    fn add_word(&mut self,
+                file: String,
+                line: usize,
+                column: usize,
+                name: String,
+                handler: Rc<WordHandler>,
+                description: String,
+                signature: String,
+                runtime: WordRuntime,
+                visibility: WordVisibility,
+                word_type: WordType);
 
     fn find_word(&self, word: &String) -> Option<WordInfo>;
     fn word_handler_info(&self, index: usize) -> Option<WordHandlerInfo>;
@@ -97,6 +239,9 @@ pub trait WordManagement
                           index: usize) -> error::Result<()>;
 
     fn call_stack(&self) -> &CallStack;
+
+    fn call_stack_push(&mut self, name: String, location: SourceLocation);
+    fn call_stack_pop(&mut self);
 }
 
 

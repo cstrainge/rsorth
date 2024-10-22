@@ -148,11 +148,11 @@ impl<T> ContextualList<T>
         }
     }
 
-    pub fn insert(&mut self, value: &T) -> usize
+    pub fn insert(&mut self, value: T) -> usize
     {
         let top = self.top_mut();
 
-        top.items.push(value.clone());
+        top.items.push(value);
         self.len() - 1
     }
 

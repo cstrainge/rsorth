@@ -9,8 +9,8 @@ use std::{ fmt::{ self, Display, Formatter },
 pub struct SourceLocation
 {
     path: String,
-    line: u32,
-    column: u32
+    line: usize,
+    column: usize
 }
 
 
@@ -55,7 +55,7 @@ impl SourceLocation
         SourceLocation { path: path.clone(), line: 1, column: 1 }
     }
 
-    pub fn new_from_info(path: &String, line: u32, column: u32) -> Self
+    pub fn new_from_info(path: &String, line: usize, column: usize) -> Self
     {
         SourceLocation { path: path.clone(), line, column }
     }
@@ -65,12 +65,12 @@ impl SourceLocation
         &self.path
     }
 
-    pub fn line(&self) -> u32
+    pub fn line(&self) -> usize
     {
         self.line
     }
 
-    pub fn column(&self) -> u32
+    pub fn column(&self) -> usize
     {
         self.column
     }

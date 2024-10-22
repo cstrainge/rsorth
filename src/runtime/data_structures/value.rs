@@ -140,8 +140,8 @@ macro_rules! value_conversion
                 {
                     Value::$variant(value) => Ok(value),
                     _ => script_error(interpreter,
-                                      &format!("Value could not be converted to {}",
-                                               stringify!($data_type)))
+                                      format!("Value could not be converted to {}",
+                                              stringify!($data_type)))
                 }
             }
         }
@@ -372,6 +372,16 @@ impl Value
         }
 
         result
+    }
+}
+
+
+
+impl Value
+{
+    pub fn deep_clone(&self) -> Value
+    {
+        self.clone()
     }
 }
 

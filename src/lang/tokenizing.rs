@@ -215,7 +215,7 @@ fn process_multi_line_string(location: &SourceLocation,
 {
     fn skip_whitespace_until_column(location: &SourceLocation,
                                     buffer: &mut SourceBuffer,
-                                    target_column: u32) -> error::Result<()>
+                                    target_column: usize) -> error::Result<()>
     {
         while    let Some(next) = buffer.peek_next()
               && is_whitespace(&next)
@@ -234,7 +234,7 @@ fn process_multi_line_string(location: &SourceLocation,
         Ok(())
     }
 
-    fn append_newlines(text: &mut String, count: u32)
+    fn append_newlines(text: &mut String, count: usize)
     {
         for _ in 0..count
         {

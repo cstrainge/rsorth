@@ -32,9 +32,21 @@ impl Display for ScriptError
     {
         match &self.location
         {
-            Some(location) => write!(f, "{}: {}", location, self.error),
-            None => write!(f, "{}", self.error)
+            Some(location) => write!(f, "{}: {}", location, self.error)?,
+            None => write!(f, "{}", self.error)?
         }
+
+        if let Some(call_stack) = &self.call_stack
+        {
+            write!(f, "\n\nCall stack\n")?;
+
+            for item in call_stack.iter().rev()
+            {
+                write!(f, "  {}\n", item)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -87,17 +99,17 @@ impl ScriptError
 
 
 
-pub fn script_error<T>(interpreter: &dyn Interpreter, message: &String) -> Result<T>
+pub fn script_error<T>(interpreter: &dyn Interpreter, message: String) -> Result<T>
 {
     let location = interpreter.current_location().clone();
     let call_stack = interpreter.call_stack().clone();
 
-    ScriptError::new_as_result(location, message.to_string(), Some(call_stack))
+    ScriptError::new_as_result(location, message, Some(call_stack))
 }
 
 
 
 pub fn script_error_str<T>(interpreter: &dyn Interpreter, message: &str) -> Result<T>
 {
-    script_error(interpreter, &message.to_string())
+    script_error(interpreter, message.to_string())
 }
