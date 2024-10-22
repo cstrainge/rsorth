@@ -33,6 +33,7 @@ pub enum WordVisibility
 #[derive(Clone)]
 pub struct WordInfo
 {
+    pub name: String,
     pub runtime: WordRuntime,
     pub word_type: WordType,
     pub visibility: WordVisibility,
@@ -50,6 +51,7 @@ impl WordInfo
     {
         WordInfo
             {
+                name: String::new(),
                 runtime: WordRuntime::Normal,
                 word_type: WordType::Native,
                 visibility: WordVisibility::Visible,

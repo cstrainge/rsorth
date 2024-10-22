@@ -225,9 +225,13 @@ pub trait WordManagement
                 visibility: WordVisibility,
                 word_type: WordType);
 
-    fn find_word(&self, word: &String) -> Option<WordInfo>;
-    fn word_handler_info(&self, index: usize) -> Option<WordHandlerInfo>;
+    fn find_word(&self, word: &String) -> Option<&WordInfo>;
+    fn word_handler_info(&self, index: usize) -> Option<&WordHandlerInfo>;
     fn inverse_name_list(&self) -> Vec<String>;
+
+    fn execute_word_handler(&mut self,
+                            location: &Option<SourceLocation>,
+                            word_handler_info: &WordHandlerInfo) -> error::Result<()>;
 
     fn execute_word(&mut self,
                     location: &Option<SourceLocation>,

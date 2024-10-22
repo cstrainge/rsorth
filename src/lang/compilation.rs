@@ -5,7 +5,7 @@ use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
              runtime::{ data_structures::{ dictionary::{ WordRuntime,
                                                          WordVisibility },
                                            value::ToValue },
-                        error,
+                        error::{self, ScriptError},
                         interpreter::Interpreter } };
 
 
@@ -74,7 +74,7 @@ impl CodeConstructor
     {
         CodeConstructor
             {
-                constructions: ConstructionList::new(),
+                constructions: vec![ Construction::new() ],
                 insertion: InsertionLocation::AtEnd,
                 input: token_list,
                 current: 0
@@ -94,21 +94,36 @@ impl CodeConstructor
         Some(token.clone())
     }
 
-    pub fn construction(&self) -> &Construction
+    pub fn construction(&self) -> error::Result<&Construction>
     {
+        if self.constructions.is_empty()
+        {
+            ScriptError::new_as_result(None,
+                                       "Accessing an empty construction context.".to_string(),
+                                       None)?;
+        }
+
         let index = self.constructions.len() - 1;
-        &self.constructions[index]
+        Ok(&self.constructions[index])
     }
 
-    pub fn construction_mut(&mut self) -> &mut Construction
+    pub fn construction_mut(&mut self) -> error::Result<&mut Construction>
     {
+        if self.constructions.is_empty()
+        {
+            ScriptError::new_as_result(None,
+                                       "Accessing an empty construction context.".to_string(),
+                                       None)?;
+        }
+
         let index = self.constructions.len() - 1;
-        &mut self.constructions[index]
+        Ok(&mut self.constructions[index])
     }
 
-    pub fn push_instruction(&mut self, instruction: Instruction)
+    pub fn push_instruction(&mut self, instruction: Instruction) -> error::Result<()>
     {
-        self.construction_mut().code.push(instruction);
+        self.construction_mut()?.code.push(instruction);
+        Ok(())
     }
 }
 
@@ -136,14 +151,14 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
     {
         if let WordRuntime::Immediate = word_info.runtime
         {
-            interpreter.execute_word(&Some(location), &word_info)?;
+            interpreter.execute_word(&Some(location), &word_info.clone())?;
         }
         else
         {
             let index = word_info.handler_index as i64;
             let instruction = Instruction::new(Some(location), Op::Execute(index.to_value()));
 
-            interpreter.context_mut().push_instruction(instruction);
+            interpreter.context_mut().push_instruction(instruction)?;
         }
     }
     else
@@ -155,7 +170,7 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
                     let instruction = Instruction::new(Some(location),
                                                        Op::Execute(name.to_value()));
 
-                    interpreter.context_mut().push_instruction(instruction);
+                    interpreter.context_mut().push_instruction(instruction)?;
                 },
 
             Token::Number(location, number) =>
@@ -163,7 +178,7 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
                     let instruction = Instruction::new(Some(location),
                                                        Op::PushConstantValue(number.to_value()));
 
-                    interpreter.context_mut().push_instruction(instruction);
+                    interpreter.context_mut().push_instruction(instruction)?;
                 },
 
             Token::String(location, text) =>
@@ -171,7 +186,7 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
                     let instruction = Instruction::new(Some(location),
                                                        Op::PushConstantValue(text.to_value()));
 
-                    interpreter.context_mut().push_instruction(instruction);
+                    interpreter.context_mut().push_instruction(instruction)?;
                 }
         }
     }
@@ -189,11 +204,28 @@ pub fn process_source_from_tokens(path: &String,
 
     while let Some(token) = interpreter.context_mut().next_token()
     {
-        process_token(interpreter, token)?;
+        if let Err(error) = process_token(interpreter, token)
+        {
+            interpreter.context_drop()?;
+            return Err(error);
+        }
     }
 
-    let code = interpreter.context().construction().code.clone();
-    interpreter.context_drop()?;
+    let code =
+        {
+            let construction = interpreter.context().construction();
+
+            if let Err(error) = construction
+            {
+                interpreter.context_drop()?;
+                return Err(error);
+            }
+
+            let code = construction.unwrap().code.clone();
+            interpreter.context_drop()?;
+
+            code
+        };
 
     interpreter.execute_code(path, &code)
 }

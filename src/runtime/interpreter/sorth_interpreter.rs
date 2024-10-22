@@ -804,6 +804,7 @@ impl WordManagement for SorthInterpreter
         let info = WordHandlerInfo::new(name.clone(), location, handler);
         let index = self.word_handlers.insert(info);
 
+        word_info.name = name.clone();
         word_info.description = description;
         word_info.signature = signature;
         word_info.runtime = runtime;
@@ -814,14 +815,19 @@ impl WordManagement for SorthInterpreter
         self.dictionary.insert(name, word_info);
     }
 
-    fn find_word(&self, _word: &String) -> Option<WordInfo>
+    fn find_word(&self, word: &String) -> Option<&WordInfo>
     {
-        None
+        self.dictionary.try_get(word)
     }
 
-    fn word_handler_info(&self, _index: usize) -> Option<WordHandlerInfo>
+    fn word_handler_info(&self, index: usize) -> Option<&WordHandlerInfo>
     {
-        None
+        if index >= self.word_handlers.len()
+        {
+            return None;
+        }
+
+        Some(&self.word_handlers[index])
     }
 
     fn inverse_name_list(&self) -> Vec<String>
@@ -829,25 +835,79 @@ impl WordManagement for SorthInterpreter
         Vec::new()
     }
 
-    fn execute_word(&mut self,
-                    _location: &Option<SourceLocation>,
-                    _word: &WordInfo) -> error::Result<()>
+    fn execute_word_handler(&mut self,
+                            location: &Option<SourceLocation>,
+                            word_handler_info: &WordHandlerInfo) -> error::Result<()>
     {
-        Ok(())
+        self.current_location = location.clone();
+
+        let location = if let Some(location) = location
+            {
+                location.clone()
+            }
+            else
+            {
+                SourceLocation::new()
+            };
+
+        self.call_stack.push(CallItem::new(word_handler_info.name.clone(), location));
+
+        let result = (*word_handler_info.handler)(self);
+
+        let _ = self.call_stack.pop();
+
+        result
+    }
+
+    fn execute_word(&mut self,
+                    location: &Option<SourceLocation>,
+                    word: &WordInfo) -> error::Result<()>
+    {
+
+        let handler_info = self.word_handler_info(word.handler_index);
+
+        if let Some(handler_info) = handler_info
+        {
+            self.execute_word_handler(location, &handler_info.clone())
+        }
+        else
+        {
+            script_error(self, format!("Handler for word {}, ({}) not found.",
+                                       word.name,
+                                       word.handler_index))
+        }
     }
 
     fn execute_word_named(&mut self,
-                          _location: &Option<SourceLocation>,
-                          _word: &String) -> error::Result<()>
+                          location: &Option<SourceLocation>,
+                          word: &String) -> error::Result<()>
     {
-        Ok(())
+        let word_info = self.dictionary.try_get(word);
+
+        if let Some(word_info) = word_info
+        {
+            self.execute_word(location, &word_info.clone())
+        }
+        else
+        {
+            script_error(self, format!("Word {} not found.", word))
+        }
     }
 
     fn execute_word_index(&mut self,
-                          _location: &Option<SourceLocation>,
-                          _index: usize) -> error::Result<()>
+                          location: &Option<SourceLocation>,
+                          index: usize) -> error::Result<()>
     {
-        Ok(())
+        let handler_info = self.word_handler_info(index);
+
+        if let Some(handler_info) = handler_info
+        {
+            self.execute_word_handler(location, &handler_info.clone())
+        }
+        else
+        {
+            script_error(self, format!("Word handler index {} not found.", index))
+        }
     }
 
     fn call_stack(&self) -> &CallStack

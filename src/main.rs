@@ -12,12 +12,17 @@ mod runtime;
 
 
 use std::env::{ args, current_exe, var };
-use runtime::{ data_structures::{ contextual_data::ContextualData, /*value::Value*/ },
-               interpreter::{ CodeManagement,
+use runtime::{ built_ins::{ base_words::register_base_words,
+                            io_words::register_io_words,
+                            terminal_words::register_terminal_words,
+                            user_words::register_user_words,
+                            ffi_words::register_ffi_words },
+               data_structures::contextual_data::ContextualData,
+               error::{ self, ScriptError },
+               interpreter::{ sorth_interpreter::SorthInterpreter,
+                              CodeManagement,
                               Interpreter,
-                              sorth_interpreter::SorthInterpreter,
-                              WordManagement },
-               error::{ self, ScriptError } };
+                              WordManagement } };
 
 
 
@@ -68,12 +73,13 @@ fn main() -> error::Result<()>
 
     interpreter.add_search_path(&std_lib_directory()?)?;
 
-    /*register_base_words(&mut interpreter);
+    register_base_words(&mut interpreter);
     register_io_words(&mut interpreter);
     register_terminal_words(&mut interpreter);
-    register_user_words(&mut interpreter);*/
+    register_user_words(&mut interpreter);
+    register_ffi_words(&mut interpreter);
 
-    interpreter.process_source_file(&"std.f".to_string())?;
+    // interpreter.process_source_file(&"std.f".to_string())?;
 
     interpreter.mark_context();
 
