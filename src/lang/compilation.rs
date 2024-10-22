@@ -196,9 +196,8 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
 
 
 
-pub fn process_source_from_tokens(path: &String,
-                              tokens: TokenList,
-                              interpreter: &mut dyn Interpreter) -> error::Result<()>
+pub fn process_source_from_tokens(tokens: TokenList,
+                                  interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.context_new(tokens);
 
@@ -227,5 +226,5 @@ pub fn process_source_from_tokens(path: &String,
             code
         };
 
-    interpreter.execute_code(path, &code)
+    interpreter.execute_code(&"<toplevel>".to_string(), &code)
 }

@@ -527,7 +527,7 @@ impl CodeManagement for SorthInterpreter
 
         self.add_search_path_for_file(&full_path)?;
 
-        let result = process_source_from_tokens(&full_path, tokens, self);
+        let result = process_source_from_tokens(tokens, self);
 
         self.drop_search_path()?;
 
@@ -537,7 +537,7 @@ impl CodeManagement for SorthInterpreter
     fn process_source(&mut self, path: &String, source: &String) -> error::Result<()>
     {
         let tokens = tokenize_from_source(path, source)?;
-        process_source_from_tokens(path, tokens, self)
+        process_source_from_tokens(tokens, self)
     }
 
     fn execute_code(&mut self, name: &String, code: &ByteCode) -> error::Result<()>
