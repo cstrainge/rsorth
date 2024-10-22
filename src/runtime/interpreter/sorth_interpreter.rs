@@ -1,10 +1,15 @@
 
-use std::rc::Rc;
+use std::{ fs::{ metadata, canonicalize }, path::{ Path, PathBuf }, rc::Rc };
 use crate::{ add_native_word,
              lang::{ code::{ ByteCode, Op },
-                     compilation::{ CodeConstructor, CodeConstructorList },
+                     compilation::{ CodeConstructor,
+                                    CodeConstructorList,
+                                    process_source_from_tokens },
                      source_buffer::SourceLocation,
-                     tokenizing::{ Token, TokenList } },
+                     tokenizing::{ Token,
+                                   TokenList,
+                                   tokenize_from_file,
+                                   tokenize_from_source } },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
@@ -60,22 +65,93 @@ impl Interpreter for SorthInterpreter
 {
     fn add_search_path(&mut self, path: &String) -> error::Result<()>
     {
+        if let Err(err) = metadata(path)
+        {
+            script_error(self, format!("Could not append search path {}: {}.", path, err))?;
+        }
+
         self.search_paths.push(path.clone());
         Ok(())
     }
 
-    fn add_search_path_for_file(&mut self, _file_path: &String) -> error::Result<()>
+    fn add_search_path_for_file(&mut self, file_path: &String) -> error::Result<()>
     {
+        let canonical = canonicalize(file_path)?;
+        let path = Path::new(&canonical);
+
+        if let Some(directory) = path.parent()
+        {
+            if directory.exists()
+            {
+                if let Some(directory) = directory.to_str()
+                {
+                    self.add_search_path(&directory.to_string())
+                }
+                else
+                {
+                    script_error_str(self, "Path contains error characters.")
+                }
+            }
+            else
+            {
+                script_error(self, format!("Path {} does not exist.", directory.display()))
+            }
+        }
+        else
+        {
+            script_error(self, format!("Could not get parent directory for file {}.", file_path))
+        }
+    }
+
+    fn drop_search_path(&mut self) -> error::Result<()>
+    {
+        if self.search_paths.is_empty()
+        {
+            script_error_str(self, "Search path stack underflow.")?;
+        }
+
+        let _ = self.search_paths.pop();
         Ok(())
     }
 
-    fn drop_search_path(&mut self)
+    fn find_file(&self, path: &String) -> error::Result<String>
     {
-    }
+        if Path::new(path).exists()
+        {
+            let canonical = canonicalize(path)?;
 
-    fn find_file(&self, _path: &String) -> error::Result<String>
-    {
-        Ok(String::new())
+            if let Some(canonical) = canonical.to_str()
+            {
+                return Ok(canonical.to_string());
+            }
+            else
+            {
+                return script_error_str(self, "Path contains invalid characters.");
+            }
+        }
+        else
+        {
+            for directory in self.search_paths.iter().rev()
+            {
+                let full_path = PathBuf::from(directory).join(path);
+
+                if full_path.exists()
+                {
+                    let canonical = canonicalize(full_path)?;
+
+                    if let Some(canonical) = canonical.to_str()
+                    {
+                        return Ok(canonical.to_string())
+                    }
+                    else
+                    {
+                        return script_error_str(self, "Path contains invalid characters.")?;
+                    }
+                }
+            }
+
+            script_error(self, format!("File {} not found.", path))
+        }
     }
 
     fn variables(&self) -> &VariableList
@@ -406,32 +482,60 @@ impl SorthInterpreter
 
 impl CodeManagement for SorthInterpreter
 {
-    fn context_new(&mut self, _tokens: TokenList)
+    fn context_new(&mut self, tokens: TokenList)
     {
+        self.constructors.push(CodeConstructor::new(tokens));
     }
 
-    fn context_drop(&mut self)
+    fn context_drop(&mut self) -> error::Result<()>
     {
+        if self.constructors.is_empty()
+        {
+            script_error_str(self, "Compile context stack underflow.")?;
+        }
+
+        let _ = self.constructors.pop();
+        Ok(())
     }
 
     fn context(&self) -> &CodeConstructor
     {
-        &self.constructors[0]
+        if self.constructors.is_empty()
+        {
+            panic!("No compile context available.");
+        }
+
+        self.constructors.last().unwrap()
     }
 
     fn context_mut(&mut self) -> &mut CodeConstructor
     {
-        &mut self.constructors[0]
+        if self.constructors.is_empty()
+        {
+            panic!("No compile context available.");
+        }
+
+        self.constructors.last_mut().unwrap()
     }
 
-    fn process_source_file(&mut self, _path: &String) -> error::Result<()>
+    fn process_source_file(&mut self, path: &String) -> error::Result<()>
     {
-        Ok(())
+        let full_path = self.find_file(path)?;
+        let tokens = tokenize_from_file(&full_path)?;
+
+        self.add_search_path_for_file(&full_path)?;
+
+        let result = process_source_from_tokens(&full_path, tokens, self);
+
+        self.drop_search_path()?;
+
+        result
     }
 
-    fn process_source(&mut self, _path: &String, _source: &String) -> error::Result<()>
+    fn process_source(&mut self, path: &String, source: &String) -> error::Result<()>
     {
-        Ok(())
+        let tokens = tokenize_from_source(path, source)?;
+        process_source_from_tokens(path, tokens, self)
     }
 
     fn execute_code(&mut self, name: &String, code: &ByteCode) -> error::Result<()>

@@ -1,7 +1,7 @@
 
 use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
                      source_buffer::SourceLocation,
-                     tokenizing::{ tokenize_from_file, tokenize_from_source, Token, TokenList } },
+                     tokenizing::{ Token, TokenList } },
              runtime::{ data_structures::{ dictionary::{ WordRuntime,
                                                          WordVisibility },
                                            value::ToValue },
@@ -181,7 +181,7 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
 
 
 
-fn process_source_from_tokens(path: &String,
+pub fn process_source_from_tokens(path: &String,
                               tokens: TokenList,
                               interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
@@ -193,32 +193,7 @@ fn process_source_from_tokens(path: &String,
     }
 
     let code = interpreter.context().construction().code.clone();
-    interpreter.context_drop();
+    interpreter.context_drop()?;
 
     interpreter.execute_code(path, &code)
-}
-
-
-pub fn process_source_from_string(path: &String,
-                                  source_text: &String,
-                                  interpreter: &mut dyn Interpreter) -> error::Result<()>
-{
-    let tokens = tokenize_from_source(path, source_text)?;
-    process_source_from_tokens(path, tokens, interpreter)
-}
-
-
-pub fn process_source_from_file(path: &String,
-                                interpreter: &mut dyn Interpreter) -> error::Result<()>
-{
-    let full_path = interpreter.find_file(path)?;
-    let tokens = tokenize_from_file(path)?;
-
-    interpreter.add_search_path(&full_path)?;
-
-    let result = process_source_from_tokens(path, tokens, interpreter);
-
-    interpreter.drop_search_path();
-
-    result
 }

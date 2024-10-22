@@ -98,6 +98,15 @@ impl ScriptError
 }
 
 
+impl From<std::io::Error> for ScriptError
+{
+    fn from(error: std::io::Error) -> ScriptError
+    {
+        ScriptError::new(None, format!("I/O error: {}", error), None)
+    }
+}
+
+
 
 pub fn script_error<T>(interpreter: &dyn Interpreter, message: String) -> Result<T>
 {

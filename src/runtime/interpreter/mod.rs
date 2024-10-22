@@ -90,7 +90,7 @@ pub trait InterpreterStack
 pub trait CodeManagement
 {
     fn context_new(&mut self, tokens: TokenList);
-    fn context_drop(&mut self);
+    fn context_drop(&mut self) -> error::Result<()>;
 
     fn context(&self) -> &CodeConstructor;
     fn context_mut(&mut self) -> &mut CodeConstructor;
@@ -157,9 +157,10 @@ macro_rules! add_native_word
     {
         {
             use std::rc::Rc;
-            use crate::runtime::data_structures::dictionary::{ WordRuntime,
-                                                               WordVisibility,
-                                                               WordType };
+            use crate::runtime::{ data_structures::dictionary::{ WordRuntime,
+                                                                 WordVisibility,
+                                                                 WordType },
+                                  interpreter::WordManagement };
 
             $interpreter.add_word(file!().to_string(),
                                   line!() as usize,
@@ -266,7 +267,7 @@ pub trait Interpreter : ContextualData +
 {
     fn add_search_path(&mut self, path: &String) -> error::Result<()>;
     fn add_search_path_for_file(&mut self, file_path: &String) -> error::Result<()>;
-    fn drop_search_path(&mut self);
+    fn drop_search_path(&mut self) -> error::Result<()>;
 
     fn find_file(&self, path: & String) -> error::Result<String>;
 
