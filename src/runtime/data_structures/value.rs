@@ -3,7 +3,8 @@ use std::{ cell::RefCell,
            fmt::{ self, Display, Formatter },
            hash::{ Hash, Hasher } };
 use crate::{ lang::tokenizing::{ NumberType, Token },
-             runtime::{ data_structures::data_object::DataObjectPtr,
+             runtime::{ data_structures::{ data_object::DataObjectPtr,
+                                           value_vec::{ ValueVec, ValueVecPtr } },
                         error::{ self, script_error },
                         interpreter::Interpreter } };
 
@@ -17,6 +18,7 @@ pub enum Value
     Float(f64),
     Bool(bool),
     String(String),
+    Vec(ValueVecPtr),
     DataObject(DataObjectPtr),
     Token(Token)
 }
@@ -26,6 +28,17 @@ pub enum Value
 pub trait ToValue
 {
     fn to_value(&self) -> Value;
+}
+
+
+
+impl ToValue for &String
+{
+    fn to_value(&self) -> Value
+    {
+        let string = (*self).clone();
+        Value::String(string)
+    }
 }
 
 
@@ -82,6 +95,7 @@ impl PartialEq for Value
         {
             match ( self, other )
             {
+                ( Value::Vec(a),        Value::Vec(b)        ) => *a.borrow() == *b.borrow(),
                 ( Value::DataObject(a), Value::DataObject(b) ) => *a.borrow() == *b.borrow(),
                 ( Value::Token(a),      Value::Token(b)      ) => a == b,
                 _                                              => false
@@ -102,6 +116,7 @@ impl Hash for Value
             Value::Float(value)      => value.to_bits().hash(state),
             Value::Bool(value)       => value.hash(state),
             Value::String(value)     => value.hash(state),
+            Value::Vec(value)        => value.borrow().hash(state),
             Value::DataObject(value) => value.borrow().hash(state),
             Value::Token(value)      => value.hash(state)
         }
@@ -120,6 +135,7 @@ impl Display for Value
             Value::Float(value)      => write!(f, "{}", value),
             Value::Bool(value)       => write!(f, "{}", value),
             Value::String(value)     => write!(f, "{}", value),
+            Value::Vec(value)        => write!(f, "{}", value.borrow()),
             Value::DataObject(value) => write!(f, "{}", value.borrow()),
             Value::Token(value)      => write!(f, "{}", value)
         }
@@ -193,10 +209,24 @@ impl ToValue for NumberType
 
 
 
+impl<T> From<Vec<T>> for Value
+    where
+        T: ToValue
+{
+    fn from(vec: Vec<T>) -> Value
+    {
+        let new_vec: Vec<Value> = vec.iter().map(|item| item.to_value()).collect();
+        Value::Vec(ValueVec::from_vec(new_vec))
+    }
+}
+
+
+
 value_conversion!(i64,           Int,        as_int);
 value_conversion!(f64,           Float,      as_float);
 value_conversion!(bool,          Bool,       as_bool);
 value_conversion!(String,        String,     as_string);
+value_conversion!(ValueVecPtr,   Vec,        as_vec);
 value_conversion!(DataObjectPtr, DataObject, as_data_object);
 value_conversion!(Token,         Token,      as_token);
 
@@ -232,6 +262,8 @@ impl Value
     is_variant!(is_int,         either_is_int,         Int);
     is_variant!(is_float,       either_is_float,       Float);
     is_variant!(is_bool,        either_is_bool,        Bool);
+    is_variant!(is_string,      either_is_string,      String);
+    is_variant!(is_vec,         either_is_vec,         Vec);
     is_variant!(is_data_object, either_is_data_object, DataObject);
 
     pub fn is_numeric(&self) -> bool
@@ -380,11 +412,28 @@ impl Value
 
 
 
-impl Value
+pub trait DeepClone
 {
-    pub fn deep_clone(&self) -> Value
+    fn deep_clone(&self) -> Value;
+}
+
+
+
+impl DeepClone for Value
+{
+    fn deep_clone(&self) -> Value
     {
-        self.clone()
+        match self
+        {
+            Value::None              => Value::None,
+            Value::Int(value)        => Value::Int(*value),
+            Value::Float(value)      => Value::Float(*value),
+            Value::Bool(value)       => Value::Bool(*value),
+            Value::String(value)     => Value::String(value.clone()),
+            Value::Vec(value)        => value.deep_clone(),
+            Value::DataObject(value) => value.deep_clone(),
+            Value::Token(value)      => Value::Token(value.clone())
+        }
     }
 }
 

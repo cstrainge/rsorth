@@ -1,5 +1,7 @@
 
-use std::{ fs::{ metadata, canonicalize }, path::{ Path, PathBuf }, rc::Rc };
+use std::{ fs::{ metadata, canonicalize },
+           path::{ Path, PathBuf },
+           rc::Rc };
 use crate::{ add_native_word,
              lang::{ code::{ ByteCode, Op },
                      compilation::{ CodeConstructor,
@@ -19,7 +21,7 @@ use crate::{ add_native_word,
                                                          WordVisibility,
                                                          WordRuntime,
                                                          WordType },
-                                           value::{ ToValue, Value } },
+                                           value::{ DeepClone, ToValue, Value } },
                         error::{ self, script_error, script_error_str },
                         interpreter::{ CallItem,
                                        CallStack,

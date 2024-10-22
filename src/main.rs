@@ -17,7 +17,8 @@ use runtime::{ built_ins::{ base_words::register_base_words,
                             terminal_words::register_terminal_words,
                             user_words::register_user_words,
                             ffi_words::register_ffi_words },
-               data_structures::contextual_data::ContextualData,
+               data_structures::{ contextual_data::ContextualData,
+                                  value::Value },
                error::{ self, ScriptError },
                interpreter::{ sorth_interpreter::SorthInterpreter,
                               CodeManagement,
@@ -87,7 +88,8 @@ fn main() -> error::Result<()>
 
     if args.len() >= 2
     {
-        /*let script_args = Value::from(&args[2..]);
+        let script_args: Vec<&String> = args[2..].iter().collect();
+        let script_args = Value::from(script_args);
 
         let handler = move |interpreter: &mut dyn Interpreter|
             {
@@ -99,7 +101,7 @@ fn main() -> error::Result<()>
                         "sorth.args",
                         handler,
                         "List of command line arguments passed to the script.",
-                        " -- argument_list");*/
+                        " -- argument_list");
 
         let user_source = interpreter.find_file(&args[1])?;
         interpreter.process_source_file(&user_source)?;

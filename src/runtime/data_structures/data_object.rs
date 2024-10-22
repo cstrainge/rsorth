@@ -4,10 +4,13 @@ use std::{ fmt::{ self, Display, Formatter },
            cell::RefCell,
            hash::{ Hash, Hasher } };
 use crate::runtime::data_structures::{ contextual_list::ContextualList,
-                                       value::{ Value,
+                                       value::{ DeepClone,
+                                                Value,
                                                 value_format_indent,
                                                 value_format_indent_inc,
                                                 value_format_indent_dec } };
+
+use super::value::ToValue;
 
 
 
@@ -69,6 +72,31 @@ impl Hash for DataObject
         {
             field.hash(state);
         }
+    }
+}
+
+
+impl DeepClone for DataObject
+{
+    fn deep_clone(&self) -> Value
+    {
+        let fields = self.fields.iter().map(|value| value.deep_clone()).collect();
+        let data_object = DataObject
+            {
+                definition_ptr: self.definition_ptr.clone(),
+                fields
+            };
+
+        Rc::new(RefCell::new(data_object)).to_value()
+    }
+}
+
+
+impl DeepClone for DataObjectPtr
+{
+    fn deep_clone(&self) -> Value
+    {
+        self.borrow().deep_clone()
     }
 }
 
