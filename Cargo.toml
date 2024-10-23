@@ -5,6 +5,11 @@ version = "0.1.17"
 edition = "2021"
 authors = [ "Chloë Strainge nullptr.0@gmail.com" ]
 
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+
 [dependencies]
 libffi = "3.2.0"
 
