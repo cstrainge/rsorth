@@ -7,3 +7,9 @@ authors = [ "Chloë Strainge nullptr.0@gmail.com" ]
 
 [dependencies]
 libffi = "3.2.0"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = [ "consoleapi", "wincon", "processenv" ] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

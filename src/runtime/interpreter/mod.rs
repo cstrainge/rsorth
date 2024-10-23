@@ -157,10 +157,9 @@ macro_rules! add_native_word
     {
         {
             use std::rc::Rc;
-            use crate::runtime::{ data_structures::dictionary::{ WordRuntime,
-                                                                 WordVisibility,
-                                                                 WordType },
-                                  interpreter::WordManagement };
+            use crate::runtime::data_structures::dictionary::{ WordRuntime,
+                                                               WordVisibility,
+                                                               WordType };
 
             $interpreter.add_word(file!().to_string(),
                                   line!() as usize,
