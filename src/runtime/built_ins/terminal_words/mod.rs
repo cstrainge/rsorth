@@ -10,8 +10,16 @@ use crate::{ add_native_word,
 #[cfg(windows)]
 mod windows;
 
+#[cfg(windows)]
+use windows::{ init_win_console, word_term_raw_mode, word_term_size, word_term_key };
+
+
+
 #[cfg(unix)]
 mod unix;
+
+#[cfg(unix)]
+use unix::{ word_term_raw_mode, word_term_size, word_term_key };
 
 
 
@@ -68,34 +76,19 @@ pub fn register_terminal_words(interpreter: &mut dyn Interpreter)
     #[cfg(windows)]
     {
         init_win_console();
-
-        add_native_word!(interpreter, "term.raw_mode", windows::word_term_raw_mode,
-            "Enter or leave the terminal's 'raw' mode.",
-            "bool -- ");
-
-        add_native_word!(interpreter, "term.size@", windows::word_term_size,
-            "Return the number of characters in the rows and columns of the terminal.",
-            " -- ");
-
-        add_native_word!(interpreter, "term.key", windows::word_term_key,
-            "",
-            " -- ");
     }
 
-    #[cfg(unix)]
-    {
-        add_native_word!(interpreter, "term.raw_mode", unix::word_term_raw_mode,
-            "Enter or leave the terminal's 'raw' mode.",
-            "bool -- ");
+    add_native_word!(interpreter, "term.raw_mode", word_term_raw_mode,
+        "Enter or leave the terminal's 'raw' mode.",
+        "bool -- ");
 
-        add_native_word!(interpreter, "term.size@", unix::word_term_size,
-            "Return the number of characters in the rows and columns of the terminal.",
-            " -- ");
+    add_native_word!(interpreter, "term.size@", word_term_size,
+        "Return the number of characters in the rows and columns of the terminal.",
+        " -- ");
 
-        add_native_word!(interpreter, "term.key", unix::word_term_key,
-            "",
-            " -- ");
-    }
+    add_native_word!(interpreter, "term.key", word_term_key,
+        "",
+        " -- ");
 
     add_native_word!(interpreter, "term.flush", word_term_flush,
         "Flush the terminal buffers.",
