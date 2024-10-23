@@ -272,6 +272,26 @@ impl InterpreterStack for SorthInterpreter
         Ok(value.as_data_object(self)?.clone())
     }
 
+    fn pick(&mut self, index: usize) -> error::Result<Value>
+    {
+        let value = self.stack.remove(index);
+        return Ok(value);
+    }
+
+    fn push_to(&mut self, index: usize) -> error::Result<()>
+    {
+        if let Some(value) = self.stack.pop()
+        {
+            self.stack.insert(index, value);
+        }
+        else
+        {
+            script_error_str(self, "Stack underflow.")?;
+        }
+
+        Ok(())
+    }
+
 }
 
 
