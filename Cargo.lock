@@ -48,6 +48,7 @@ version = "0.1.17"
 dependencies = [
  "libc",
  "libffi",
+ "libffi-sys",
  "winapi",
 ]
 

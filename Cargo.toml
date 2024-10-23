@@ -11,10 +11,20 @@ codegen-units = 1
 strip = "symbols"
 
 [dependencies]
-libffi = "3.2.0"
+
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = [ "consoleapi", "wincon", "processenv" ] }
+winapi = { version = "0.3", features = [
+    "consoleapi",
+    "errhandlingapi",
+    "processenv",
+    "winbase",
+    "handleapi",
+    "wincon"
+] }
+
+libffi-sys = { version = "2.3.0", features = ["system"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+libffi = "3.2.0"
