@@ -43,9 +43,9 @@ fn word_unique_str(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 pub fn register_string_words(interpreter: &mut dyn Interpreter)
 {
-    /* add_native_word!(interpreter, "hex", word_hex,
+    add_native_word!(interpreter, "hex", word_hex,
         "Convert a number into a hex string.",
-        "number -- hex_string"); */
+        "number -- hex_string");
 
     add_native_word!(interpreter, "unique_str", word_unique_str,
         "Generate a unique string and push it onto the data stack.",
