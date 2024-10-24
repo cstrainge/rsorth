@@ -1,7 +1,7 @@
 
 use crate::{ add_native_word,
              lang::{ code::{ Instruction, Op },
-                     compilation::InsertionLocation,
+                     compilation::{process_token, InsertionLocation},
                      tokenizing::Token },
              runtime::{ data_structures::value::ToValue,
                         error::{self, script_error},
@@ -192,6 +192,10 @@ fn word_code_compile_until_words(interpreter: &mut dyn Interpreter) -> error::Re
             {
                 interpreter.push(&word.to_value());
                 return Ok(());
+            }
+            else
+            {
+                process_token(interpreter, token)?;
             }
         }
         else
