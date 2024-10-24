@@ -29,7 +29,7 @@ fn word_print_stack(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     println!("Depth: {}", interpreter.stack().len());
 
-    for value in interpreter.stack()
+    for value in interpreter.stack().iter().rev()
     {
         if value.is_string()
         {
