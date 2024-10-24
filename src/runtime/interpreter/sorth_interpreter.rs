@@ -298,6 +298,18 @@ impl InterpreterStack for SorthInterpreter
         Ok(value.as_data_object(self)?.clone())
     }
 
+    fn pop_as_code(&mut self) -> error::Result<ByteCode>
+    {
+        let value = self.pop()?;
+
+        if !value.is_code()
+        {
+            script_error_str(self, "Expected a code block.")?;
+        }
+
+        Ok(value.as_code(self)?.clone())
+    }
+
     fn pick(&mut self, index: usize) -> error::Result<Value>
     {
         let value = self.stack.remove(index);

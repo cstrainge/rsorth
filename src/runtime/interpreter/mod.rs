@@ -85,6 +85,7 @@ pub trait InterpreterStack
     fn pop_as_bool(&mut self) -> error::Result<bool>;
     fn pop_as_string(&mut self) -> error::Result<String>;
     fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>;
+    fn pop_as_code(&mut self) -> error::Result<ByteCode>;
 
     fn pick(&mut self, index: usize) -> error::Result<Value>;
     fn push_to(&mut self, index: usize) -> error::Result<()>;

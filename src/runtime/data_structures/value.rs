@@ -2,7 +2,8 @@
 use std::{ cell::RefCell,
            fmt::{ self, Display, Formatter },
            hash::{ Hash, Hasher } };
-use crate::{ lang::tokenizing::{ NumberType, Token },
+use crate::{ lang::{ tokenizing::{ NumberType, Token },
+                     code::{ ByteCode, pretty_print_code } },
              runtime::{ data_structures::{ data_object::DataObjectPtr,
                                            value_vec::{ ValueVec, ValueVecPtr } },
                         error::{ self, script_error },
@@ -20,7 +21,8 @@ pub enum Value
     String(String),
     Vec(ValueVecPtr),
     DataObject(DataObjectPtr),
-    Token(Token)
+    Token(Token),
+    Code(ByteCode)
 }
 
 
@@ -118,7 +120,8 @@ impl Hash for Value
             Value::String(value)     => value.hash(state),
             Value::Vec(value)        => value.borrow().hash(state),
             Value::DataObject(value) => value.borrow().hash(state),
-            Value::Token(value)      => value.hash(state)
+            Value::Token(value)      => value.hash(state),
+            Value::Code(value)       => value.hash(state)
         }
     }
 }
@@ -137,7 +140,8 @@ impl Display for Value
             Value::String(value)     => write!(f, "{}", value),
             Value::Vec(value)        => write!(f, "{}", value.borrow()),
             Value::DataObject(value) => write!(f, "{}", value.borrow()),
-            Value::Token(value)      => write!(f, "{}", value)
+            Value::Token(value)      => write!(f, "{}", value),
+            Value::Code(value)       => write!(f, "{}", pretty_print_code(None, value))
         }
     }
 }
@@ -252,6 +256,7 @@ value_conversion!(String,        String,     as_string);
 value_conversion!(ValueVecPtr,   Vec,        as_vec);
 value_conversion!(DataObjectPtr, DataObject, as_data_object);
 value_conversion!(Token,         Token,      as_token);
+value_conversion!(ByteCode,      Code,       as_code);
 
 
 
@@ -288,6 +293,7 @@ impl Value
     is_variant!(is_string,      either_is_string,      String);
     is_variant!(is_vec,         either_is_vec,         Vec);
     is_variant!(is_data_object, either_is_data_object, DataObject);
+    is_variant!(is_code,        either_is_code,        Code);
 
     pub fn is_numeric(&self) -> bool
     {
@@ -455,7 +461,8 @@ impl DeepClone for Value
             Value::String(value)     => Value::String(value.clone()),
             Value::Vec(value)        => value.deep_clone(),
             Value::DataObject(value) => value.deep_clone(),
-            Value::Token(value)      => Value::Token(value.clone())
+            Value::Token(value)      => Value::Token(value.clone()),
+            Value::Code(value)       => Value::Code(value.clone())
         }
     }
 }

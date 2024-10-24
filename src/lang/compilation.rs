@@ -1,10 +1,11 @@
 
+use std::collections::HashMap;
 use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
                      source_buffer::SourceLocation,
                      tokenizing::{ Token, TokenList } },
              runtime::{ data_structures::{ dictionary::{ WordRuntime,
                                                          WordVisibility },
-                                           value::ToValue },
+                                           value::{ ToValue, Value } },
                         error::{ self, ScriptError },
                         interpreter::Interpreter } };
 
@@ -41,6 +42,76 @@ impl Construction
 
                 code: ByteCode::new()
             }
+    }
+
+    pub fn resolve_jumps(&mut self)
+    {
+        fn is_jump(instruction: &Instruction) -> bool
+        {
+            match instruction.op
+            {
+                Op::Jump(_)          |
+                Op::JumpIfZero(_)    |
+                Op::JumpIfNotZero(_) |
+                Op::MarkLoopExit(_)  |
+                Op::MarkCatch(_)       => true,
+                _                      => false
+            }
+        }
+
+        fn jump_label(instruction: &Instruction) -> Option<String>
+        {
+            match &instruction.op
+            {
+                Op::Jump(value)          => value.get_string_val(),
+                Op::JumpIfZero(value)    => value.get_string_val(),
+                Op::JumpIfNotZero(value) => value.get_string_val(),
+                Op::MarkLoopExit(value)  => value.get_string_val(),
+                Op::MarkCatch(value)     => value.get_string_val(),
+                _                        => None
+            }
+        }
+
+        fn update_jump_op(jump_op: &Op, relative: i64) -> Op
+        {
+            match jump_op
+            {
+                Op::Jump(_)          => Op::Jump(relative.to_value()),
+                Op::JumpIfZero(_)    => Op::JumpIfZero(relative.to_value()),
+                Op::JumpIfNotZero(_) => Op::JumpIfNotZero(relative.to_value()),
+                Op::MarkLoopExit(_)  => Op::MarkLoopExit(relative.to_value()),
+                Op::MarkCatch(_)     => Op::MarkCatch(relative.to_value()),
+                _                    => panic!("Invalid jump operation!")
+            }
+        }
+
+        let mut jump_indices = Vec::<i64>::new();
+        let mut jump_targets = HashMap::<String, i64>::new();
+
+        for index in 0..self.code.len()
+        {
+            if is_jump(&self.code[index])
+            {
+                jump_indices.push(index as i64);
+            }
+            else if let Op::JumpTarget(value) = &self.code[index].op
+            {
+                jump_targets.insert(value.to_string(), index as i64);
+                self.code[index].op = Op::JumpTarget(Value::None);
+            }
+        }
+
+        for jump_index in jump_indices
+        {
+            if let Some(jump_label) = jump_label(&self.code[jump_index as usize])
+            {
+                let target_index = jump_targets[&jump_label];
+                let relative = target_index - jump_index;
+                let jump_op = &self.code[jump_index as usize].op;
+
+                self.code[jump_index as usize].op = update_jump_op(&jump_op, relative);
+            }
+        }
     }
 }
 
@@ -99,6 +170,14 @@ impl CodeConstructor
         self.constructions.push(Construction::new());
     }
 
+    pub fn construction_new_with_code(&mut self, code: ByteCode)
+    {
+        let mut construction = Construction::new();
+
+        construction.code = code;
+        self.constructions.push(construction);
+    }
+
     pub fn construction_pop(&mut self) -> error::Result<Construction>
     {
         if self.constructions.len() == 0
@@ -139,7 +218,15 @@ impl CodeConstructor
 
     pub fn push_instruction(&mut self, instruction: Instruction) -> error::Result<()>
     {
-        self.construction_mut()?.code.push(instruction);
+        if let InsertionLocation::AtEnd = self.insertion
+        {
+            self.construction_mut()?.code.push(instruction);
+        }
+        else
+        {
+            self.construction_mut()?.code.insert(0, instruction);
+        }
+
         Ok(())
     }
 }

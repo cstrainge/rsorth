@@ -102,6 +102,27 @@ pub struct Instruction
 
 
 
+impl Hash for Instruction
+{
+    fn hash<H: Hasher>(&self, state: &mut H)
+    {
+        self.location.hash(state);
+        self.op.hash(state);
+    }
+}
+
+
+
+impl PartialEq for Instruction
+{
+    fn eq(&self, other: &Self) -> bool
+    {
+        self.location == other.location && self.op == other.op
+    }
+}
+
+
+
 impl Display for Instruction
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result
@@ -168,6 +189,7 @@ impl Instruction
 
 
 
-pub fn pretty_print_code(_interpreter: &dyn Interpreter, _code: &ByteCode)
+pub fn pretty_print_code(_interpreter: Option<&dyn Interpreter>, _code: &ByteCode) -> String
 {
+    "".to_string()
 }
