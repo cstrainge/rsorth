@@ -1,6 +1,6 @@
 
 use std::{ fmt::{ self, Display, Formatter }, rc::Rc };
-use crate::{ lang::{ code::ByteCode,
+use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
                      compilation::CodeConstructor,
                      source_buffer::SourceLocation,
                      tokenizing::{ NumberType, Token, TokenList } },
@@ -99,6 +99,15 @@ pub trait CodeManagement
     fn next_token_text(&mut self) -> error::Result<String>;
     fn next_token_string(&mut self) -> error::Result<String>;
     fn next_token_number(&mut self) -> error::Result<NumberType>;
+    fn next_token_word(&mut self) -> error::Result<( SourceLocation, String )>;
+
+    fn insert_user_instruction(&mut self,
+                               location: Option<SourceLocation>,
+                               op: Op) -> error::Result<()>
+    {
+        let instruction = Instruction::new(location, op);
+        self.context_mut().push_instruction(instruction)
+    }
 
     fn context_new(&mut self, tokens: TokenList);
     fn context_drop(&mut self) -> error::Result<()>;

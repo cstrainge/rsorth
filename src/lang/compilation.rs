@@ -59,15 +59,29 @@ impl Construction
             }
         }
 
+        fn as_string(value: &Value) -> Option<String>
+        {
+            if value.is_string_like()
+            {
+                Some(value.get_string_val())
+            }
+            else
+            {
+                None
+            }
+        }
+
         fn jump_label(instruction: &Instruction) -> Option<String>
         {
+            // We only return something if the jump instruction has a string label.  If the
+            // instruction is already fixed up, we don't have anything to do.
             match &instruction.op
             {
-                Op::Jump(value)          => value.get_string_val(),
-                Op::JumpIfZero(value)    => value.get_string_val(),
-                Op::JumpIfNotZero(value) => value.get_string_val(),
-                Op::MarkLoopExit(value)  => value.get_string_val(),
-                Op::MarkCatch(value)     => value.get_string_val(),
+                Op::Jump(value)          => as_string(value),
+                Op::JumpIfZero(value)    => as_string(value),
+                Op::JumpIfNotZero(value) => as_string(value),
+                Op::MarkLoopExit(value)  => as_string(value),
+                Op::MarkCatch(value)     => as_string(value),
                 _                        => None
             }
         }

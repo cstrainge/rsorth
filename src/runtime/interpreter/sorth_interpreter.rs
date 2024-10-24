@@ -247,7 +247,7 @@ impl InterpreterStack for SorthInterpreter
             script_error_str(self, "Expected numeric value.")?;
         }
 
-        Ok(value.get_int_val().unwrap())
+        Ok(value.get_int_val())
     }
 
     fn pop_as_float(&mut self) -> error::Result<f64>
@@ -259,7 +259,7 @@ impl InterpreterStack for SorthInterpreter
             script_error_str(self, "Expected numeric value.")?;
         }
 
-        Ok(value.get_float_val().unwrap())
+        Ok(value.get_float_val())
     }
 
     fn pop_as_bool(&mut self) -> error::Result<bool>
@@ -271,7 +271,7 @@ impl InterpreterStack for SorthInterpreter
             script_error_str(self, "Expected boolean value.")?;
         }
 
-        Ok(value.get_bool_val().unwrap())
+        Ok(value.get_bool_val())
     }
 
     fn pop_as_string(&mut self) -> error::Result<String>
@@ -283,7 +283,7 @@ impl InterpreterStack for SorthInterpreter
             script_error_str(self, "Expected a string value.")?;
         }
 
-        Ok(value.get_string_val().unwrap())
+        Ok(value.get_string_val())
     }
 
     fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>
@@ -338,72 +338,60 @@ impl SorthInterpreter
 {
     fn define_variable(&mut self, value: &Value) -> error::Result<()>
     {
-        // Get the name, and an index that will represent the variable.
-        let name = value.get_string_val();
-        let index = self.variables.insert(Value::default());
-
-        // Were we successful in getting the name?
-        match name
+        if !value.is_string_like()
         {
-            Some(name) =>
-                {
-                    // Create a new handler that will access the variable by index.
-                    let handler = move |interpreter: &mut dyn Interpreter|
-                    {
-                        interpreter.push(&index.to_value());
-                        Ok(())
-                    };
-
-                    add_native_word!(self,
-                                     name,
-                                     handler,
-                                     format!("Access the index for variable {}.", name),
-                                     " -- variable_index");
-                    Ok(())
-                }
-
-            None =>
-                {
-                    // Looks like the instruction encoded an incompatible type of value.
-                    script_error(self, format!("Invalid variable name {}.", value))?;
-                    Ok(())
-                }
+            script_error(self, format!("Invalid variable name {}.", value))?;
         }
+        else
+        {
+            // Get the name, and an index that will represent the variable.
+            let name = value.get_string_val();
+            let index = self.variables.insert(Value::default());
+
+            // Create a new handler that will access the variable by index.
+            let handler = move |interpreter: &mut dyn Interpreter|
+            {
+                interpreter.push(&index.to_value());
+                Ok(())
+            };
+
+            add_native_word!(self,
+                             name,
+                             handler,
+                             format!("Access the index for variable {}.", name),
+                             " -- variable_index");
+        }
+
+        Ok(())
     }
 
     fn define_constant(&mut self, value: &Value) -> error::Result<()>
     {
-        // Get the name, and the new constant value.
-        let name = value.get_string_val();
-        let constant = self.pop()?;
-
-        // Were we successful in getting the name?
-        match name
+        if !value.is_string_like()
         {
-            Some(name) =>
-                {
-                    // Create a new handler that will push the constant value onto the stack.
-                    let handler = move |interpreter: &mut dyn Interpreter|
-                    {
-                        interpreter.push(&constant.deep_clone());
-                        Ok(())
-                    };
-
-                    add_native_word!(self,
-                                     name,
-                                     handler,
-                                     &format!("Access value for constant {}.", name),
-                                     " -- constant_value");
-                    Ok(())
-                }
-
-            None =>
-                {
-                    // Looks like the instruction encoded an incompatible type of value.
-                    script_error(self, format!("Invalid constant name {}.", value))?;
-                    Ok(())
-                }
+            script_error(self, format!("Invalid constant name {}.", value))?;
         }
+        else
+        {
+            // Get the name, and the new constant value.
+            let name = value.get_string_val();
+            let constant = self.pop()?;
+
+            // Create a new handler that will push the constant value onto the stack.
+            let handler = move |interpreter: &mut dyn Interpreter|
+            {
+                interpreter.push(&constant.deep_clone());
+                Ok(())
+            };
+
+            add_native_word!(self,
+                             name,
+                             handler,
+                             &format!("Access value for constant {}.", name),
+                             " -- constant_value");
+        }
+
+        Ok(())
     }
 
     fn read_variable(&mut self) -> error::Result<()>
@@ -493,24 +481,20 @@ impl SorthInterpreter
         Ok(())
     }
 
-    fn absolute_index(&self, pc: usize, relative_index_value: &Value) -> error::Result<usize>
+    fn absolute_index(&self, pc: usize, relative_index: &Value) -> error::Result<usize>
     {
         // Compute an absolute index from the relative index encoded within the original
         // instruction.
         let absolute =
-            match relative_index_value.get_int_val()
+            if relative_index.is_numeric()
             {
-                Some(relative_index) =>
-                    {
-                        (pc as i64 + relative_index) as usize
-                    },
-                None =>
-                    {
-                        // Looks like the instruction encoded an incompatible type of value.
-                        script_error(self, format!("Invalid loop exit index {}.",
-                                                   relative_index_value))?;
-                        0
-                    }
+                (pc as i64 + relative_index.get_int_val()) as usize
+            }
+            else
+            {
+                script_error(self, format!("Invalid loop exit index {}.",
+                                           relative_index))?;
+                0
             };
 
         // All's good.
@@ -569,6 +553,15 @@ impl CodeManagement for SorthInterpreter
     {
         let number = self.next_token()?.number(self)?.clone();
         Ok(number)
+    }
+
+    fn next_token_word(&mut self) -> error::Result<( SourceLocation, String )>
+    {
+        let token = self.next_token()?;
+        let word = token.word(self)?.clone();
+        let location = token.location().clone();
+
+        Ok((location, word ))
     }
 
     fn context_new(&mut self, tokens: TokenList)

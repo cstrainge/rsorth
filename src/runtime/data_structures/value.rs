@@ -62,22 +62,22 @@ impl PartialEq for Value
         {
             if Value::either_is_float(self, other)
             {
-                let a = self.get_float_val().unwrap();
-                let b = self.get_float_val().unwrap();
+                let a = self.get_float_val();
+                let b = self.get_float_val();
 
                 a == b
             }
             else if Value::either_is_int(self, other)
             {
-                let a = self.get_int_val().unwrap();
-                let b = self.get_int_val().unwrap();
+                let a = self.get_int_val();
+                let b = self.get_int_val();
 
                 a == b
             }
             else if Value::either_is_bool(self, other)
             {
-                let a = self.get_bool_val().unwrap();
-                let b = other.get_bool_val().unwrap();
+                let a = self.get_bool_val();
+                let b = other.get_bool_val();
 
                 a == b
             }
@@ -88,8 +88,8 @@ impl PartialEq for Value
         }
         else if self.is_string_like() && other.is_string_like()
         {
-            let a = self.get_string_val().unwrap();
-            let b = other.get_string_val().unwrap();
+            let a = self.get_string_val();
+            let b = other.get_string_val();
 
             a == b
         }
@@ -334,77 +334,77 @@ impl Value
         }
     }
 
-    pub fn get_string_val(&self) -> Option<String>
+    pub fn get_string_val(&self) -> String
     {
         match self
         {
-            Value::String(value)            => Some(value.clone()),
+            Value::String(value)            => value.clone(),
             Value::Token(token) =>
                 match token
                 {
-                    Token::String(_, value) => Some(value.clone()),
-                    Token::Word(_, word)    => Some(word.clone()),
-                    _                       => None
+                    Token::String(_, value) => value.clone(),
+                    Token::Word(_, word)    => word.clone(),
+                    _                       => panic!("Value is not convertible to string.")
                 }
-            _                               => None
+            _                               => panic!("Value is not convertible to string.")
         }
     }
 
-    pub fn get_bool_val(&self) -> Option<bool>
+    pub fn get_bool_val(&self) -> bool
     {
         match self
         {
-            Value::None         => Some(false),
-            Value::Int(value)   => Some(*value != 0),
-            Value::Float(value) => Some(*value != 0.0),
-            Value::Bool(value)  => Some(*value),
-            _                   => None
+            Value::None         => false,
+            Value::Int(value)   => *value != 0,
+            Value::Float(value) => *value != 0.0,
+            Value::Bool(value)  => *value,
+            _                   => panic!("Value is not convertible to bool.")
         }
     }
 
-    pub fn get_int_val(&self) -> Option<i64>
+    pub fn get_int_val(&self) -> i64
     {
         match self
         {
-            Value::None                              => Some(0),
-            Value::Int(value)                        => Some(*value),
-            Value::Float(value)                      => Some(*value as i64),
-            Value::Bool(value)                       => Some(if *value { 1 } else { 0 }),
-            Value::Token(token) =>
-                match token
-                {
-                    Token::Number(_, num_type) =>
-                        match num_type
-                        {
-                            NumberType::Int(value)   => Some(*value),
-                            NumberType::Float(value) => Some(*value as i64)
-                        }
-                    _                                => None
-                }
-            _                                        => None
-        }
-    }
-
-    pub fn get_float_val(&self) -> Option<f64>
-    {
-        match self
-        {
-            Value::None                              => Some(0.0),
-            Value::Int(value)                        => Some(*value as f64),
-            Value::Float(value)                      => Some(*value),
-            Value::Bool(value)                       => Some(if *value { 1.0 } else { 0.0 }),
+            Value::None                              => 0,
+            Value::Int(value)                        => *value,
+            Value::Float(value)                      => *value as i64,
+            Value::Bool(value)                       => if *value { 1 } else { 0 },
             Value::Token(token) =>
                 match token
                 {
                     Token::Number(_, num_type) =>
                         match num_type
                         {
-                            NumberType::Int(value)   => Some(*value as f64),
-                            NumberType::Float(value) => Some(*value)
+                            NumberType::Int(value)   => *value,
+                            NumberType::Float(value) => *value as i64
                         }
-                    _                                => None
+                    _                                => panic!("Value is not convertible to int.")
                 }
-            _                                        => None
+            _                                        => panic!("Value is not convertible to int.")
+        }
+    }
+
+    pub fn get_float_val(&self) -> f64
+    {
+        match self
+        {
+            Value::None                              => 0.0,
+            Value::Int(value)                        => *value as f64,
+            Value::Float(value)                      => *value,
+            Value::Bool(value)                       => if *value { 1.0 } else { 0.0 },
+            Value::Token(token) =>
+                match token
+                {
+                    Token::Number(_, num_type) =>
+                        match num_type
+                        {
+                            NumberType::Int(value)   => *value as f64,
+                            NumberType::Float(value) => *value
+                        }
+                    _                                => panic!("Value is not convertible to float.")
+                }
+            _                                        => panic!("Value is not convertible to float.")
         }
     }
 }

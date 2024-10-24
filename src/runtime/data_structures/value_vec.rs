@@ -34,7 +34,7 @@ impl Display for ValueVec
         {
             if value.is_string()
             {
-                write!(f, "{}", Value::stringify(&value.get_string_val().unwrap()))?;
+                write!(f, "{}", Value::stringify(&value.get_string_val()))?;
             }
             else
             {
