@@ -6,6 +6,7 @@ use crate::{ add_native_word,
                         interpreter::Interpreter} };
 
 
+
 fn word_hex(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
