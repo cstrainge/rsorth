@@ -216,9 +216,9 @@ impl InterpreterStack for SorthInterpreter
         &self.stack
     }
 
-    fn push(&mut self, value: &Value)
+    fn push(&mut self, value: Value)
     {
-        self.stack.push(value.clone());
+        self.stack.push(value);
 
         if self.stack.len() > self.max_depth
         {
@@ -351,7 +351,7 @@ impl SorthInterpreter
             // Create a new handler that will access the variable by index.
             let handler = move |interpreter: &mut dyn Interpreter|
             {
-                interpreter.push(&index.to_value());
+                interpreter.push(index.to_value());
                 Ok(())
             };
 
@@ -380,7 +380,7 @@ impl SorthInterpreter
             // Create a new handler that will push the constant value onto the stack.
             let handler = move |interpreter: &mut dyn Interpreter|
             {
-                interpreter.push(&constant.deep_clone());
+                interpreter.push(constant.deep_clone());
                 Ok(())
             };
 
@@ -410,7 +410,7 @@ impl SorthInterpreter
             };
 
         // Perform the read.
-        self.push(&value);
+        self.push(value);
         Ok(())
     }
 
@@ -477,7 +477,7 @@ impl SorthInterpreter
         // Make sure we don't push a reference to the original constant value.
         let new_value = value.deep_clone();
 
-        self.push(&new_value);
+        self.push(new_value);
         Ok(())
     }
 
@@ -830,7 +830,7 @@ impl CodeManagement for SorthInterpreter
                 if let Some(catch_index) = catch_locations.pop()
                 {
                     pc = catch_index - 1;
-                    self.push(&script_error.to_string().to_value());
+                    self.push(script_error.to_string().to_value());
                 }
                 else
                 {

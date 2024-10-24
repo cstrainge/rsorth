@@ -11,7 +11,7 @@ fn word_word(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let token = interpreter.next_token()?;
 
-    interpreter.push(&token.to_value());
+    interpreter.push(token.to_value());
     Ok(())
 }
 
@@ -66,7 +66,7 @@ fn word_is_defined(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let word = interpreter.pop_as_string()?;
     let found = if let Some(_) = interpreter.find_word(&word) { true } else { false };
 
-    interpreter.push(&found.to_value());
+    interpreter.push(found.to_value());
     Ok(())
 }
 
@@ -75,7 +75,7 @@ fn word_is_defined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let ( _, word ) = interpreter.next_token_word()?;
     let found = if let Some(_) = interpreter.find_word(&word) { true } else { false };
 
-    interpreter.push(&found.to_value());
+    interpreter.push(found.to_value());
     Ok(())
 }
 
@@ -84,7 +84,7 @@ fn word_is_undefined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let ( _, word ) = interpreter.next_token_word()?;
     let not_found = if let Some(_) = interpreter.find_word(&word) { false } else { true };
 
-    interpreter.push(&not_found.to_value());
+    interpreter.push(not_found.to_value());
     Ok(())
 }
 

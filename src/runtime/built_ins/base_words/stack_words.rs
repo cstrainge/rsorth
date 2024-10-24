@@ -10,8 +10,8 @@ fn word_dup(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
 
-    interpreter.push(&value);
-    interpreter.push(&value);
+    interpreter.push(value.clone());
+    interpreter.push(value);
 
     Ok(())
 }
@@ -28,8 +28,8 @@ fn word_swap(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let a = interpreter.pop()?;
     let b = interpreter.pop()?;
 
-    interpreter.push(&a);
-    interpreter.push(&b);
+    interpreter.push(a);
+    interpreter.push(b);
 
     Ok(())
 }
@@ -39,9 +39,9 @@ fn word_over(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let a = interpreter.pop()?;
     let b = interpreter.pop()?;
 
-    interpreter.push(&a);
-    interpreter.push(&b);
-    interpreter.push(&a);
+    interpreter.push(a.clone());
+    interpreter.push(b);
+    interpreter.push(a);
 
     Ok(())
 }
@@ -52,22 +52,22 @@ fn word_rot(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let b = interpreter.pop()?;
     let a = interpreter.pop()?;
 
-    interpreter.push(&c);
-    interpreter.push(&a);
-    interpreter.push(&b);
+    interpreter.push(c);
+    interpreter.push(a);
+    interpreter.push(b);
 
     Ok(())
 }
 
 fn word_stack_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(&interpreter.stack().len().to_value());
+    interpreter.push(interpreter.stack().len().to_value());
     Ok(())
 }
 
 fn word_stack_max_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(&interpreter.stack_max_depth().to_value());
+    interpreter.push(interpreter.stack_max_depth().to_value());
     Ok(())
 }
 
@@ -84,7 +84,7 @@ fn word_pick(interpreter: &mut dyn Interpreter) -> error::Result<()>
     }
 
     let value = interpreter.pick(index as usize)?;
-    interpreter.push(&value);
+    interpreter.push(value);
 
     Ok(())
 }

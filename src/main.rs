@@ -93,7 +93,7 @@ fn main() -> error::Result<()>
 
         let handler = move |interpreter: &mut dyn Interpreter|
             {
-                interpreter.push(&script_args);
+                interpreter.push(script_args.clone());
                 Ok(())
             };
 

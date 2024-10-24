@@ -35,7 +35,7 @@ fn word_term_readline(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let mut line = String::new();
 
     stdin().read_line(&mut line)?;
-    interpreter.push(&line.trim_end_matches(&[ '\n', '\r' ]).to_string().to_value());
+    interpreter.push(line.trim_end_matches(&[ '\n', '\r' ]).to_string().to_value());
 
     Ok(())
 }
@@ -64,7 +64,7 @@ fn word_term_is_printable(interpreter: &mut dyn Interpreter) -> error::Result<()
                  || character == '\n'
                  || character == '\n';
 
-    interpreter.push(&result.to_value());
+    interpreter.push(result.to_value());
 
     Ok(())
 }

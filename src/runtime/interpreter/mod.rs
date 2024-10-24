@@ -77,7 +77,7 @@ pub trait InterpreterStack
 
     fn stack(&self) -> &ValueStack;
 
-    fn push(&mut self, value: &Value);
+    fn push(&mut self, value: Value);
 
     fn pop(&mut self) -> error::Result<Value>;
     fn pop_as_int(&mut self) -> error::Result<i64>;

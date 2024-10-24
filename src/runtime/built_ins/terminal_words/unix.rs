@@ -104,8 +104,8 @@ pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
         script_error_str(interpreter, "Failed to get the terminal size.")?;
     }
 
-    interpreter.push(&(size.ws_col as i64).to_value());
-    interpreter.push(&(size.ws_row as i64).to_value());
+    interpreter.push((size.ws_col as i64).to_value());
+    interpreter.push((size.ws_row as i64).to_value());
 
     Ok(())
 }
@@ -123,7 +123,7 @@ pub fn word_term_key(interpreter: &mut dyn Interpreter) -> error::Result<()>
             Ok(_) =>
                 {
                     let character = buffer[0] as char;
-                    interpreter.push(&character.to_string().to_value());
+                    interpreter.push(character.to_string().to_value());
 
                     break;
                 },

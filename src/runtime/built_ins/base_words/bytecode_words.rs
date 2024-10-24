@@ -128,7 +128,7 @@ fn word_code_pop_stack_block(interpreter: &mut dyn Interpreter) -> error::Result
 {
     let code = interpreter.context_mut().construction_pop()?.code;
 
-    interpreter.push(&code.to_value());
+    interpreter.push(code.to_value());
     Ok(())
 }
 
@@ -144,7 +144,7 @@ fn word_code_stack_block_size(interpreter: &mut dyn Interpreter) -> error::Resul
 {
     let value = interpreter.context().construction()?.code.len().to_value();
 
-    interpreter.push(&value);
+    interpreter.push(value);
     Ok(())
 }
 
@@ -190,7 +190,7 @@ fn word_code_compile_until_words(interpreter: &mut dyn Interpreter) -> error::Re
         {
             if let Some(word) = is_one_of_words(interpreter, &token, &words)
             {
-                interpreter.push(&word.to_value());
+                interpreter.push(word.to_value());
                 return Ok(());
             }
             else

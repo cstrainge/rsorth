@@ -62,13 +62,13 @@ fn word_print_structures(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_sorth_version(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(&env!("CARGO_PKG_VERSION").to_string().to_value());
+    interpreter.push(env!("CARGO_PKG_VERSION").to_string().to_value());
     Ok(())
 }
 
 fn word_sorth_search_path(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(&Value::from(interpreter.search_paths()));
+    interpreter.push(Value::from(interpreter.search_paths()));
     Ok(())
 }
 
@@ -77,8 +77,7 @@ fn word_sorth_find_file(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let file = interpreter.pop_as_string()?;
     let full_path = interpreter.find_file(&file)?;
 
-    interpreter.push(&full_path.to_value());
-
+    interpreter.push(full_path.to_value());
     Ok(())
 }
 
@@ -94,7 +93,7 @@ fn word_sorth_memory(interpreter: &mut dyn Interpreter) -> error::Result<()>
     {
         if let Some(process) = system.process(pid)
         {
-            interpreter.push(&(process.memory() as i64).to_value());
+            interpreter.push((process.memory() as i64).to_value());
         }
         else
         {
