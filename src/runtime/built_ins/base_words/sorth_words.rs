@@ -94,7 +94,7 @@ fn word_sorth_memory(interpreter: &mut dyn Interpreter) -> error::Result<()>
     {
         if let Some(process) = system.process(pid)
         {
-            interpreter.push(&(process.virtual_memory() as i64).to_value());
+            interpreter.push(&(process.memory() as i64).to_value());
         }
         else
         {

@@ -94,6 +94,23 @@ impl CodeConstructor
         Some(token.clone())
     }
 
+    pub fn construction_new(&mut self)
+    {
+        self.constructions.push(Construction::new());
+    }
+
+    pub fn construction_pop(&mut self) -> error::Result<Construction>
+    {
+        if self.constructions.len() == 0
+        {
+            ScriptError::new_as_result(None,
+                                       "No construction to pop.".to_string(),
+                                       None)?;
+        }
+
+        Ok(self.constructions.pop().unwrap())
+    }
+
     pub fn construction(&self) -> error::Result<&Construction>
     {
         if self.constructions.is_empty()
