@@ -5,15 +5,19 @@ version = "0.1.17"
 edition = "2021"
 authors = [ "Chloë Strainge nullptr.0@gmail.com" ]
 
+
 [profile.release]
 lto = true
 codegen-units = 1
 strip = "symbols"
 
+
 [dependencies]
+sysinfo = "0.32.0"
 
 
 [target.'cfg(windows)'.dependencies]
+libffi-sys = { version = "2.3.0", features = ["system"] }
 winapi = { version = "0.3", features = [
     "consoleapi",
     "errhandlingapi",
@@ -23,8 +27,7 @@ winapi = { version = "0.3", features = [
     "wincon"
 ] }
 
-libffi-sys = { version = "2.3.0", features = ["system"] }
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2"
 libffi = "3.2.0"
+libc = "0.2"

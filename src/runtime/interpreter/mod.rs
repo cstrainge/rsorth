@@ -3,7 +3,7 @@ use std::{ fmt::{ self, Display, Formatter }, rc::Rc };
 use crate::{ lang::{ code::ByteCode,
                      compilation::CodeConstructor,
                      source_buffer::SourceLocation,
-                     tokenizing::TokenList },
+                     tokenizing::{ NumberType, Token, TokenList } },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::DataObjectPtr,
@@ -73,6 +73,8 @@ pub type ValueStack = Vec<Value>;
 
 pub trait InterpreterStack
 {
+    fn stack_max_depth(&self) -> usize;
+
     fn stack(&self) -> &ValueStack;
 
     fn push(&mut self, value: &Value);
@@ -92,6 +94,11 @@ pub trait InterpreterStack
 
 pub trait CodeManagement
 {
+    fn next_token(&mut self) -> error::Result<Token>;
+    fn next_token_text(&mut self) -> error::Result<String>;
+    fn next_token_string(&mut self) -> error::Result<String>;
+    fn next_token_number(&mut self) -> error::Result<NumberType>;
+
     fn context_new(&mut self, tokens: TokenList);
     fn context_drop(&mut self) -> error::Result<()>;
 
@@ -152,11 +159,13 @@ impl WordHandlerInfo
 #[macro_export]
 macro_rules! add_native_word
 {
-    ( $interpreter:expr ,
-      $name:expr ,
-      $function:expr ,
-      $description:expr ,
-      $signature:expr) =>
+    (
+        $interpreter:expr ,
+        $name:expr ,
+        $function:expr ,
+        $description:expr ,
+        $signature:expr
+    ) =>
     {
         {
             use std::rc::Rc;
@@ -183,11 +192,13 @@ macro_rules! add_native_word
 #[macro_export]
 macro_rules! add_native_immediate_word
 {
-    ( $interpreter:expr ,
-      $name:literal ,
-      $function:expr ,
-      $description:literal ,
-      $signature:literal) =>
+    (
+        $interpreter:expr ,
+        $name:literal ,
+        $function:expr ,
+        $description:literal ,
+        $signature:literal
+    ) =>
     {
         {
             use std::rc::Rc;
@@ -195,16 +206,16 @@ macro_rules! add_native_immediate_word
                                                                WordVisibility,
                                                                WordType };
 
-            interpreter.add_word(file!().to_string(),
-                                 line!() as usize,
-                                 column!() as usize,
-                                 $name.to_string(),
-                                 Rc::new($function),
-                                 $description.to_string(),
-                                 $signature.to_string(),
-                                 WordRuntime::Immediate,
-                                 WordVisibility::Visible,
-                                 WordType::Native);
+            $interpreter.add_word(file!().to_string(),
+                                  line!() as usize,
+                                  column!() as usize,
+                                  $name.to_string(),
+                                  Rc::new($function),
+                                  $description.to_string(),
+                                  $signature.to_string(),
+                                  WordRuntime::Immediate,
+                                  WordVisibility::Visible,
+                                  WordType::Native);
         }
     };
 }
@@ -275,8 +286,12 @@ pub trait Interpreter : ContextualData +
     fn add_search_path_for_file(&mut self, file_path: &String) -> error::Result<()>;
     fn drop_search_path(&mut self) -> error::Result<()>;
 
+    fn search_paths(&self) -> &Vec<String>;
+
     fn find_file(&self, path: & String) -> error::Result<String>;
 
     fn variables(&self) -> &VariableList;
     fn dictionary(&self) -> &Dictionary;
+
+    fn reset(&mut self) -> error::Result<()>;
 }

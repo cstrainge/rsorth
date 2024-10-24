@@ -11,7 +11,8 @@ use crate::{ add_native_word,
                      tokenizing::{ Token,
                                    TokenList,
                                    tokenize_from_file,
-                                   tokenize_from_source } },
+                                   tokenize_from_source,
+                                   NumberType } },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
@@ -45,6 +46,8 @@ pub type WordList = ContextualList<WordHandlerInfo>;
 
 pub struct SorthInterpreter
 {
+    max_depth: usize,
+
     search_paths: SearchPaths,
 
     stack: ValueStack,
@@ -116,6 +119,11 @@ impl Interpreter for SorthInterpreter
         Ok(())
     }
 
+    fn search_paths(&self) -> &Vec<String>
+    {
+        &self.search_paths
+    }
+
     fn find_file(&self, path: &String) -> error::Result<String>
     {
         if Path::new(path).exists()
@@ -165,6 +173,14 @@ impl Interpreter for SorthInterpreter
     {
         &self.dictionary
     }
+
+    fn reset(&mut self) -> error::Result<()>
+    {
+        self.release_context();
+        self.stack.clear();
+
+        Ok(())
+    }
 }
 
 
@@ -190,6 +206,11 @@ impl ContextualData for SorthInterpreter
 
 impl InterpreterStack for SorthInterpreter
 {
+    fn stack_max_depth(&self) -> usize
+    {
+        self.max_depth
+    }
+
     fn stack(&self) -> &ValueStack
     {
         &self.stack
@@ -198,6 +219,11 @@ impl InterpreterStack for SorthInterpreter
     fn push(&mut self, value: &Value)
     {
         self.stack.push(value.clone());
+
+        if self.stack.len() > self.max_depth
+        {
+            self.max_depth = self.stack.len();
+        }
     }
 
     fn pop(&mut self) -> error::Result<Value>
@@ -312,7 +338,7 @@ impl SorthInterpreter
                     // Create a new handler that will access the variable by index.
                     let handler = move |interpreter: &mut dyn Interpreter|
                     {
-                        interpreter.push(&(index as i64).to_value());
+                        interpreter.push(&index.to_value());
                         Ok(())
                     };
 
@@ -504,6 +530,35 @@ impl SorthInterpreter
 
 impl CodeManagement for SorthInterpreter
 {
+    fn next_token(&mut self) -> error::Result<Token>
+    {
+        let optional_token = self.context_mut().next_token();
+
+        match optional_token
+        {
+            Some(token) => Ok(token),
+            None        => script_error_str(self, "Reading past end of token stream.")
+        }
+    }
+
+    fn next_token_text(&mut self) -> error::Result<String>
+    {
+        let text = self.next_token()?.text(self)?.clone();
+        Ok(text)
+    }
+
+    fn next_token_string(&mut self) -> error::Result<String>
+    {
+        let string = self.next_token()?.string(self)?.clone();
+        Ok(string)
+    }
+
+    fn next_token_number(&mut self) -> error::Result<NumberType>
+    {
+        let number = self.next_token()?.number(self)?.clone();
+        Ok(number)
+    }
+
     fn context_new(&mut self, tokens: TokenList)
     {
         self.constructors.push(CodeConstructor::new(tokens));
@@ -966,6 +1021,8 @@ impl SorthInterpreter
     {
         SorthInterpreter
             {
+                max_depth: 0,
+
                 search_paths: Vec::new(),
 
                 stack: Vec::new(),

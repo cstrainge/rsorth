@@ -61,8 +61,13 @@ fn word_rot(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_stack_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(&(interpreter.stack().len() as i64).to_value());
+    interpreter.push(&interpreter.stack().len().to_value());
+    Ok(())
+}
 
+fn word_stack_max_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
+{
+    interpreter.push(&interpreter.stack_max_depth().to_value());
     Ok(())
 }
 
@@ -126,7 +131,11 @@ pub fn register_stack_words(interpreter: &mut dyn Interpreter)
         "a b c -- c a b");
 
     add_native_word!(interpreter, "stack.depth", word_stack_depth,
-        "Get the current depth of the stack.",
+        "Get the depth of the stack before calling this word.",
+        " -- depth");
+
+    add_native_word!(interpreter, "stack.max-depth", word_stack_max_depth,
+        "Get the current maximum depth of the stack.",
         " -- depth");
 
     add_native_word!(interpreter, "pick", word_pick,

@@ -209,11 +209,34 @@ impl ToValue for NumberType
 
 
 
+impl ToValue for usize
+{
+    fn to_value(&self) -> Value
+    {
+        Value::Int(*self as i64)
+    }
+}
+
+
+
 impl<T> From<Vec<T>> for Value
     where
         T: ToValue
 {
     fn from(vec: Vec<T>) -> Value
+    {
+        let new_vec: Vec<Value> = vec.iter().map(|item| item.to_value()).collect();
+        Value::Vec(ValueVec::from_vec(new_vec))
+    }
+}
+
+
+
+impl<T> From<&Vec<T>> for Value
+    where
+        T: ToValue
+{
+    fn from(vec: &Vec<T>) -> Value
     {
         let new_vec: Vec<Value> = vec.iter().map(|item| item.to_value()).collect();
         Value::Vec(ValueVec::from_vec(new_vec))

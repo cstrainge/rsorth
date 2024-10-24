@@ -5,7 +5,7 @@ use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
              runtime::{ data_structures::{ dictionary::{ WordRuntime,
                                                          WordVisibility },
                                            value::ToValue },
-                        error::{self, ScriptError},
+                        error::{ self, ScriptError },
                         interpreter::Interpreter } };
 
 
@@ -126,7 +126,6 @@ impl CodeConstructor
         Ok(())
     }
 }
-
 
 
 pub type CodeConstructorList = Vec<CodeConstructor>;

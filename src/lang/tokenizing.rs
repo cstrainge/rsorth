@@ -4,7 +4,8 @@ use std::{ fmt::{ self, Debug, Display, Formatter },
            hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::{ SourceBuffer, SourceLocation },
              runtime::{ data_structures::value::Value,
-                        error::{ self, ScriptError } } };
+                        error::{ self, ScriptError, script_error_str },
+                        interpreter::Interpreter } };
 
 
 
@@ -152,6 +153,94 @@ impl Debug for Token
             Token::String(location, string) => write!(f, "{}: {}", location,
                                                                    Value::stringify(string)),
             Token::Word(location, string)   => write!(f, "{}: {}", location, string)
+        }
+    }
+}
+
+
+
+impl Token
+{
+    pub fn location(&self) -> &SourceLocation
+    {
+        match self
+        {
+            Token::Number(location, _) => location,
+            Token::String(location, _) => location,
+            Token::Word(location, _)   => location
+        }
+    }
+
+    pub fn is_number(&self) -> bool
+    {
+        match self
+        {
+            Token::Number(_, _) => true,
+            _                   => false
+        }
+    }
+
+    pub fn number(&self, interpreter: &mut dyn Interpreter) -> error::Result<&NumberType>
+    {
+        match self
+        {
+            Token::Number(_, number) => Ok(number),
+            _                        => script_error_str(interpreter, "Token is not a number.")
+        }
+    }
+
+    pub fn is_textual(&self) -> bool
+    {
+        match self
+        {
+            Token::String(_, _) => true,
+            Token::Word(_, _)   => true,
+            _                   => false
+        }
+    }
+
+    pub fn text(&self, interpreter: &mut dyn Interpreter) -> error::Result<&String>
+    {
+        match self
+        {
+            Token::String(_, text) => Ok(text),
+            Token::Word(_, text)   => Ok(text),
+            _                      => script_error_str(interpreter, "Token is not textual.")
+        }
+    }
+    pub fn is_string(&self) -> bool
+    {
+        match self
+        {
+            Token::String(_, _) => true,
+            _                   => false
+        }
+    }
+
+    pub fn string(&self, interpreter: &mut dyn Interpreter) -> error::Result<&String>
+    {
+        match self
+        {
+            Token::String(_, text) => Ok(text),
+            _                      => script_error_str(interpreter, "Token is not a string.")
+        }
+    }
+
+    pub fn is_word(&self) -> bool
+    {
+        match self
+        {
+            Token::Word(_, _) => true,
+            _                 => false
+        }
+    }
+
+    pub fn word(&self, interpreter: &mut dyn Interpreter) -> error::Result<&String>
+    {
+        match self
+        {
+            Token::Word(_, word) => Ok(word),
+            _                    => script_error_str(interpreter, "Token is not a word.")
         }
     }
 }
