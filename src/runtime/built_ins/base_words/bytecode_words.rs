@@ -62,7 +62,7 @@ fn word_mark_loop_exit(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_unmark_loop_exit(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    insert_user_instruction(interpreter, Op::JumpLoopExit)
+    insert_user_instruction(interpreter, Op::UnmarkLoopExit)
 }
 
 fn word_op_mark_catch(interpreter: &mut dyn Interpreter) -> error::Result<()>

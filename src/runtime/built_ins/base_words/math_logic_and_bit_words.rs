@@ -196,8 +196,9 @@ fn word_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
     let a = interpreter.pop()?;
+    let result = a == b;
 
-    interpreter.push((a == b).to_value());
+    interpreter.push(result.to_value());
     Ok(())
 }
 

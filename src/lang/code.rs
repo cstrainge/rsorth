@@ -211,7 +211,17 @@ impl Instruction
 
 
 
-pub fn pretty_print_code(_interpreter: Option<&dyn Interpreter>, _code: &ByteCode) -> String
+pub fn pretty_print_code(_interpreter: Option<&dyn Interpreter>, code: &ByteCode) -> String
 {
-    "".to_string()
+    use std::fmt::Write;
+
+    let mut result = String::with_capacity(code.len() * 20);
+
+    for ( index, instruction ) in code.iter().enumerate()
+    {
+        writeln!(&mut result, "{:4}: {}", index, instruction)
+            .expect("Writing to String should never fail.");
+    }
+
+    result
 }
