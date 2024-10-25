@@ -61,7 +61,7 @@ impl Construction
 
         fn as_string(value: &Value) -> Option<String>
         {
-            if value.is_stringable()
+            if value.is_string()
             {
                 Some(value.get_string_val())
             }
@@ -244,6 +244,7 @@ impl CodeConstructor
         Ok(())
     }
 }
+
 
 
 pub type CodeConstructorList = Vec<CodeConstructor>;

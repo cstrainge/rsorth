@@ -2,6 +2,7 @@
 use sysinfo::System;
 use crate::{ add_native_immediate_word,
              add_native_word,
+             lang::compilation::process_token,
              runtime::{ data_structures::value::{ ToValue, Value},
              error::{ self, script_error, script_error_str },
              interpreter::Interpreter } };
@@ -23,6 +24,96 @@ fn word_include_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let file = interpreter.next_token_text()?;
     interpreter.process_source_file(&file)
+}
+
+fn word_if_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
+{
+    fn is_one_of(found: &str, words: &[&str]) -> bool
+    {
+        words.iter().any(|&word| found == word)
+    }
+
+    fn skip_until(interpreter: &mut dyn Interpreter, words: &[&str]) -> error::Result<String>
+    {
+        let mut done = false;
+        let mut matched = String::new();
+
+            while done == false
+            {
+                match interpreter.next_token()
+                {
+                    Ok(found) =>
+                        {
+                            if    let Ok(text) = found.word(interpreter)
+                               && is_one_of(text, words)
+                            {
+                                done = true;
+                                matched = text.clone()
+                            }
+                        }
+
+                    Err(err) => return Err(err)
+                }
+            };
+
+        Ok(matched)
+    }
+
+    fn compile_until(interpreter: &mut dyn Interpreter, words: &[&str]) -> error::Result<String>
+    {
+        let mut done = false;
+        let mut matched = String::new();
+
+        while done == false
+        {
+            match interpreter.next_token()
+            {
+                Ok(found) =>
+                    {
+                        if    let Ok(text) = found.word(interpreter)
+                           && is_one_of(text, words)
+                        {
+                            done = true;
+                            matched = text.clone()
+                        }
+                        else
+                        {
+                            process_token(interpreter, found)?;
+                        }
+                    },
+
+                Err(err) => return Err(err)
+            }
+        }
+
+        Ok(matched)
+    }
+
+    let else_label = "[else]";
+    let then_label = "[then]";
+
+    let test_value = interpreter.pop_as_bool()?;
+
+    if test_value
+    {
+        let found = compile_until(interpreter, &[ else_label, then_label ])?;
+
+        if found == else_label
+        {
+            skip_until(interpreter, &[ then_label ])?;
+        }
+    }
+    else
+    {
+        let found = skip_until(interpreter, &[ else_label, then_label ])?;
+
+        if found == else_label
+        {
+            compile_until(interpreter, &[ then_label ])?;
+        }
+    }
+
+    Ok(())
 }
 
 fn word_print_stack(interpreter: &mut dyn Interpreter) -> error::Result<()>
@@ -154,6 +245,10 @@ pub fn register_sorth_words(interpreter: &mut dyn Interpreter)
     add_native_immediate_word!(interpreter, "[include]", word_include_im,
         "Include and execute another source file.",
         "[include] file/to/include.f");
+
+    add_native_immediate_word!(interpreter, "[if]", word_if_im,
+        "Evaluate an if at compile time.  Only the code on successful branch is compiled.",
+        "[if] <code> [else] <code> [then]");
 
     add_native_word!(interpreter, ".s", word_print_stack,
         "Print out the data stack without changing it.",
