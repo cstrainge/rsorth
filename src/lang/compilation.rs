@@ -61,7 +61,7 @@ impl Construction
 
         fn as_string(value: &Value) -> Option<String>
         {
-            if value.is_string_like()
+            if value.is_stringable()
             {
                 Some(value.get_string_val())
             }

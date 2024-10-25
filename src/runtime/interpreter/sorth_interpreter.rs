@@ -278,7 +278,7 @@ impl InterpreterStack for SorthInterpreter
     {
         let value = self.pop()?;
 
-        if !value.is_string_like()
+        if !value.is_stringable()
         {
             script_error_str(self, "Expected a string value.")?;
         }
@@ -338,7 +338,7 @@ impl SorthInterpreter
 {
     fn define_variable(&mut self, value: &Value) -> error::Result<()>
     {
-        if !value.is_string_like()
+        if !value.is_stringable()
         {
             script_error(self, format!("Invalid variable name {}.", value))?;
         }
@@ -367,7 +367,7 @@ impl SorthInterpreter
 
     fn define_constant(&mut self, value: &Value) -> error::Result<()>
     {
-        if !value.is_string_like()
+        if !value.is_stringable()
         {
             script_error(self, format!("Invalid constant name {}.", value))?;
         }

@@ -1,5 +1,6 @@
 
-use std::{ fmt::{ self, Debug, Display, Formatter },
+use std::{ cmp::Ordering,
+           fmt::{ self, Debug, Display, Formatter },
            fs::read_to_string,
            hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::{ SourceBuffer, SourceLocation },
@@ -23,11 +24,27 @@ impl PartialEq for NumberType
     {
         match ( self, other )
         {
-            ( NumberType::Int(a), NumberType::Int(b) ) => a == b,
+            ( NumberType::Int(a), NumberType::Int(b) )     => a == b,
             ( NumberType::Float(a), NumberType::Float(b) ) => a == b,
 
-            ( NumberType::Float(a), NumberType::Int(b) ) => a == &(*b as f64),
-            ( NumberType::Int(a), NumberType::Float(b) ) => &(*a as f64) == b
+            ( NumberType::Float(a), NumberType::Int(b) )   => a == &(*b as f64),
+            ( NumberType::Int(a), NumberType::Float(b) )   => &(*a as f64) == b
+        }
+    }
+}
+
+
+impl PartialOrd for NumberType
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
+        match ( self, other )
+        {
+            ( NumberType::Int(a), NumberType::Int(b) )     => a.partial_cmp(b),
+            ( NumberType::Float(a), NumberType::Float(b) ) => a.partial_cmp(b),
+
+            ( NumberType::Float(a), NumberType::Int(b) )   => a.partial_cmp(&(*b as f64)),
+            ( NumberType::Int(a), NumberType::Float(b) )   => (*a as f64).partial_cmp(b)
         }
     }
 }
@@ -73,7 +90,7 @@ impl Debug for NumberType
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub enum Token
 {
     Number(SourceLocation, NumberType),
@@ -83,21 +100,6 @@ pub enum Token
 
 
 pub type TokenList = Vec<Token>;
-
-
-impl PartialEq for Token
-{
-    fn eq(&self, other: &Self) -> bool
-    {
-        match ( self, other )
-        {
-            ( Token::Number(l_a, v_a), Token::Number(l_b, v_b) ) => (l_a == l_b) && (v_a == v_b),
-            ( Token::String(l_a, v_a), Token::String(l_b, v_b) ) => (l_a == l_b) && (v_a == v_b),
-            ( Token::Word(l_a, v_a),   Token::Word(l_b, v_b)   ) => (l_a == l_b) && (v_a == v_b),
-            _ => false
-        }
-    }
-}
 
 
 impl Hash for Token

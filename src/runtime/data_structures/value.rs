@@ -11,7 +11,8 @@ use crate::{ lang::{ tokenizing::{ NumberType, Token },
 
 
 
-#[derive(Clone)]
+
+#[derive(Clone, PartialOrd)]
 pub enum Value
 {
     None,
@@ -86,7 +87,7 @@ impl PartialEq for Value
                 false
             }
         }
-        else if self.is_string_like() && other.is_string_like()
+        else if self.is_stringable() && other.is_stringable()
         {
             let a = self.get_string_val();
             let b = other.get_string_val();
@@ -318,10 +319,14 @@ impl Value
         a.is_numeric() && b.is_numeric()
     }
 
-    pub fn is_string_like(&self) -> bool
+    pub fn is_stringable(&self) -> bool
     {
         match self
         {
+            Value::None                 => true,
+            Value::Int(_)               => true,
+            Value::Float(_)             => true,
+
             Value::String(_)            => true,
             Value::Token(token) =>
                 match token
@@ -338,6 +343,9 @@ impl Value
     {
         match self
         {
+            Value::None                     => String::new(),
+            Value::Int(value)               => value.to_string(),
+            Value::Float(value)             => value.to_string(),
             Value::String(value)            => value.clone(),
             Value::Token(token) =>
                 match token
@@ -354,11 +362,12 @@ impl Value
     {
         match self
         {
-            Value::None         => false,
-            Value::Int(value)   => *value != 0,
-            Value::Float(value) => *value != 0.0,
-            Value::Bool(value)  => *value,
-            _                   => panic!("Value is not convertible to bool.")
+            Value::None          => false,
+            Value::Int(value)    => *value != 0,
+            Value::Float(value)  => *value != 0.0,
+            Value::Bool(value)   => *value,
+            Value::String(value) => !value.is_empty(),
+            _                    => true
         }
     }
 

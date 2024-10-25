@@ -1,5 +1,6 @@
 
-use std::{ fmt::{ self, Display, Formatter },
+use std::{ cmp::Ordering,
+           fmt::{ self, Display, Formatter },
            hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::SourceLocation,
              runtime::{ interpreter::Interpreter,
@@ -63,6 +64,37 @@ impl PartialEq for Op
 }
 
 
+impl PartialOrd for Op
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
+    {
+        match ( self, other )
+        {
+            ( Op::DefVariable(a),       Op::DefVariable(b)       ) => a.partial_cmp(b),
+            ( Op::DefConstant(a),       Op::DefConstant(b)       ) => a.partial_cmp(b),
+            ( Op::ReadVariable,         Op::ReadVariable         ) => Some(Ordering::Equal),
+            ( Op::WriteVariable,        Op::WriteVariable        ) => Some(Ordering::Equal),
+            ( Op::Execute(a),           Op::Execute(b)           ) => a.partial_cmp(b),
+            ( Op::PushConstantValue(a), Op::PushConstantValue(b) ) => a.partial_cmp(b),
+            ( Op::MarkLoopExit(a),      Op::MarkLoopExit(b)      ) => a.partial_cmp(b),
+            ( Op::UnmarkLoopExit,       Op::UnmarkLoopExit       ) => Some(Ordering::Equal),
+            ( Op::MarkCatch(a),         Op::MarkCatch(b)         ) => a.partial_cmp(b),
+            ( Op::UnmarkCatch,          Op::UnmarkCatch          ) => Some(Ordering::Equal),
+            ( Op::MarkContext,          Op::MarkContext          ) => Some(Ordering::Equal),
+            ( Op::ReleaseContext,       Op::ReleaseContext       ) => Some(Ordering::Equal),
+            ( Op::Jump(a),              Op::Jump(b)              ) => a.partial_cmp(b),
+            ( Op::JumpIfZero(a),        Op::JumpIfZero(b)        ) => a.partial_cmp(b),
+            ( Op::JumpIfNotZero(a),     Op::JumpIfNotZero(b)     ) => a.partial_cmp(b),
+            ( Op::JumpLoopStart,        Op::JumpLoopStart        ) => Some(Ordering::Equal),
+            ( Op::JumpLoopExit,         Op::JumpLoopExit         ) => Some(Ordering::Equal),
+            ( Op::JumpTarget(a),        Op::JumpTarget(b)        ) => a.partial_cmp(b),
+
+            _ => None
+        }
+    }
+}
+
+
 impl Hash for Op
 {
     fn hash<H: Hasher>(&self, state: &mut H)
@@ -93,7 +125,7 @@ impl Hash for Op
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub struct Instruction
 {
     pub location: Option<SourceLocation>,
@@ -108,16 +140,6 @@ impl Hash for Instruction
     {
         self.location.hash(state);
         self.op.hash(state);
-    }
-}
-
-
-
-impl PartialEq for Instruction
-{
-    fn eq(&self, other: &Self) -> bool
-    {
-        self.location == other.location && self.op == other.op
     }
 }
 

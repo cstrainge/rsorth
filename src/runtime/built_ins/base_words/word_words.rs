@@ -47,7 +47,7 @@ fn word_execute(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
         interpreter.execute_word_index(&None, index as usize)?;
     }
-    else if value.is_string_like()
+    else if value.is_stringable()
     {
         let word = value.get_string_val();
 

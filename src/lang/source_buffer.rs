@@ -5,21 +5,12 @@ use std::{ fmt::{ self, Display, Formatter },
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, PartialOrd, Eq)]
 pub struct SourceLocation
 {
     path: String,
     line: usize,
     column: usize
-}
-
-
-impl PartialEq for SourceLocation
-{
-    fn eq(&self, other: &Self) -> bool
-    {
-        (self.path == other.path) && (self.line == other.line) && (self.column == other.column)
-    }
 }
 
 

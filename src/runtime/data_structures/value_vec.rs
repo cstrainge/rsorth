@@ -11,7 +11,7 @@ use super::value::{DeepClone, ToValue};
 
 
 
-#[derive(Clone, PartialEq, Hash)]
+#[derive(Clone, PartialEq, PartialOrd, Hash)]
 pub struct ValueVec
 {
     values: VecDeque<Value>

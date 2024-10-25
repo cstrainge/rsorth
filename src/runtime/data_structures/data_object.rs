@@ -1,5 +1,6 @@
 
-use std::{ fmt::{ self, Display, Formatter },
+use std::{ cmp::Ordering,
+           fmt::{ self, Display, Formatter },
            rc::Rc,
            cell::RefCell,
            hash::{ Hash, Hasher } };
@@ -60,6 +61,23 @@ impl PartialEq for DataObject
         }
 
         true
+    }
+}
+
+
+impl PartialOrd for DataObject
+{
+    fn partial_cmp(&self, other: &DataObject) -> Option<Ordering>
+    {
+        let self_name = &self.definition_ptr.borrow().name;
+        let other_name = &other.definition_ptr.borrow().name;
+
+        if self_name != other_name
+        {
+            return self_name.partial_cmp(other_name);
+        }
+
+        self.fields.partial_cmp(&other.fields)
     }
 }
 
