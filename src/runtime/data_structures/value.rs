@@ -296,6 +296,16 @@ macro_rules! is_variant
 
 impl Value
 {
+    pub fn is_none(&self) -> bool
+    {
+        if let Value::None = self { true } else { false }
+    }
+
+    pub fn either_is_none(a: &Value, b: &Value) -> bool
+    {
+        a.is_none() || b.is_none()
+    }
+
     is_variant!(is_int,         either_is_int,         Int);
     is_variant!(is_float,       either_is_float,       Float);
     is_variant!(is_bool,        either_is_bool,        Bool);
@@ -303,6 +313,7 @@ impl Value
     is_variant!(is_vec,         either_is_vec,         Vec);
     is_variant!(is_hash_map,    either_is_hash_map,    HashMap);
     is_variant!(is_data_object, either_is_data_object, DataObject);
+    is_variant!(is_token,       either_is_token,       Token);
     is_variant!(is_code,        either_is_code,        Code);
 
     pub fn is_numeric(&self) -> bool
