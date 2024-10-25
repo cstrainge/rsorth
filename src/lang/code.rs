@@ -8,7 +8,7 @@ use crate::{ lang::source_buffer::SourceLocation,
 
 
 
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub enum Op
 {
     DefVariable(Value),
@@ -125,7 +125,7 @@ impl Hash for Op
 
 
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, Eq, PartialOrd)]
 pub struct Instruction
 {
     pub location: Option<SourceLocation>,

@@ -1,9 +1,16 @@
 
-use std::{ fmt::{ self, Display, Formatter }, rc::Rc };
-use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
+use std::{ fmt::{ self,
+                  Display,
+                  Formatter },
+           rc::Rc };
+use crate::{ lang::{ code::{ ByteCode,
+                             Instruction,
+                             Op },
                      compilation::CodeConstructor,
                      source_buffer::SourceLocation,
-                     tokenizing::{ NumberType, Token, TokenList } },
+                     tokenizing::{ NumberType,
+                                   Token,
+                                   TokenList } },
              runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::DataObjectPtr,
@@ -12,7 +19,9 @@ use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
                                                          WordRuntime,
                                                          WordType,
                                                          WordVisibility },
-                                           value::Value },
+                                           value::Value,
+                                           value_hash::ValueHashPtr,
+                                           value_vec::ValueVecPtr },
                          error } };
 
 
@@ -81,9 +90,12 @@ pub trait InterpreterStack
 
     fn pop(&mut self) -> error::Result<Value>;
     fn pop_as_int(&mut self) -> error::Result<i64>;
+    fn pop_as_usize(&mut self) -> error::Result<usize>;
     fn pop_as_float(&mut self) -> error::Result<f64>;
     fn pop_as_bool(&mut self) -> error::Result<bool>;
     fn pop_as_string(&mut self) -> error::Result<String>;
+    fn pop_as_array(&mut self) -> error::Result<ValueVecPtr>;
+    fn pop_as_hash_map(&mut self) -> error::Result<ValueHashPtr>;
     fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>;
     fn pop_as_code(&mut self) -> error::Result<ByteCode>;
 

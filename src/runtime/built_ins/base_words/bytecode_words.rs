@@ -174,7 +174,7 @@ fn word_code_compile_until_words(interpreter: &mut dyn Interpreter) -> error::Re
         None
     }
 
-    let word_count = interpreter.pop_as_int()? as usize;
+    let word_count = interpreter.pop_as_usize()?;
     let mut words = Vec::new();
 
     words.reserve(word_count);

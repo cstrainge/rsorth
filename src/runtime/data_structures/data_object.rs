@@ -15,6 +15,7 @@ use super::value::ToValue;
 
 
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct DataObjectDefinition
 {
     name: String,
@@ -30,7 +31,7 @@ pub type DataDefinitionList = ContextualList<DataObjectDefinitionPtr>;
 
 
 
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub struct DataObject
 {
     pub definition_ptr: DataObjectDefinitionPtr,

@@ -5,6 +5,7 @@ use std::{ cell::RefCell,
 use crate::{ lang::{ tokenizing::{ NumberType, Token },
                      code::{ ByteCode, pretty_print_code } },
              runtime::{ data_structures::{ data_object::DataObjectPtr,
+                                           value_hash::ValueHashPtr,
                                            value_vec::{ ValueVec, ValueVecPtr } },
                         error::{ self, script_error },
                         interpreter::Interpreter } };
@@ -21,6 +22,7 @@ pub enum Value
     Bool(bool),
     String(String),
     Vec(ValueVecPtr),
+    HashMap(ValueHashPtr),
     DataObject(DataObjectPtr),
     Token(Token),
     Code(ByteCode)
@@ -53,6 +55,9 @@ impl Default for Value
         Value::None
     }
 }
+
+
+impl Eq for Value {}
 
 
 impl PartialEq for Value
@@ -120,6 +125,7 @@ impl Hash for Value
             Value::Bool(value)       => value.hash(state),
             Value::String(value)     => value.hash(state),
             Value::Vec(value)        => value.borrow().hash(state),
+            Value::HashMap(value)    => value.borrow().hash(state),
             Value::DataObject(value) => value.borrow().hash(state),
             Value::Token(value)      => value.hash(state),
             Value::Code(value)       => value.hash(state)
@@ -140,6 +146,7 @@ impl Display for Value
             Value::Bool(value)       => write!(f, "{}", value),
             Value::String(value)     => write!(f, "{}", value),
             Value::Vec(value)        => write!(f, "{}", value.borrow()),
+            Value::HashMap(value)    => write!(f, "{}", value.borrow()),
             Value::DataObject(value) => write!(f, "{}", value.borrow()),
             Value::Token(value)      => write!(f, "{}", value),
             Value::Code(value)       => write!(f, "{}", pretty_print_code(None, value))
@@ -255,6 +262,7 @@ value_conversion!(f64,           Float,      as_float);
 value_conversion!(bool,          Bool,       as_bool);
 value_conversion!(String,        String,     as_string);
 value_conversion!(ValueVecPtr,   Vec,        as_vec);
+value_conversion!(ValueHashPtr,  HashMap,    as_hash_map);
 value_conversion!(DataObjectPtr, DataObject, as_data_object);
 value_conversion!(Token,         Token,      as_token);
 value_conversion!(ByteCode,      Code,       as_code);
@@ -293,6 +301,7 @@ impl Value
     is_variant!(is_bool,        either_is_bool,        Bool);
     is_variant!(is_string,      either_is_string,      String);
     is_variant!(is_vec,         either_is_vec,         Vec);
+    is_variant!(is_hash_map,    either_is_hash_map,    HashMap);
     is_variant!(is_data_object, either_is_data_object, DataObject);
     is_variant!(is_code,        either_is_code,        Code);
 
@@ -469,6 +478,7 @@ impl DeepClone for Value
             Value::Bool(value)       => Value::Bool(*value),
             Value::String(value)     => Value::String(value.clone()),
             Value::Vec(value)        => value.deep_clone(),
+            Value::HashMap(value)    => value.deep_clone(),
             Value::DataObject(value) => value.deep_clone(),
             Value::Token(value)      => Value::Token(value.clone()),
             Value::Code(value)       => Value::Code(value.clone())

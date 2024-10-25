@@ -18,6 +18,9 @@ pub enum NumberType
 }
 
 
+impl Eq for NumberType {}
+
+
 impl PartialEq for NumberType
 {
     fn eq(&self, other: &Self) -> bool
@@ -90,7 +93,7 @@ impl Debug for NumberType
 
 
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, Eq, PartialOrd)]
 pub enum Token
 {
     Number(SourceLocation, NumberType),

@@ -11,7 +11,7 @@ use super::value::{DeepClone, ToValue};
 
 
 
-#[derive(Clone, PartialEq, PartialOrd, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct ValueVec
 {
     values: VecDeque<Value>
@@ -129,6 +129,11 @@ impl ValueVec
     pub fn resize(&mut self, new_size: usize)
     {
         self.values.resize(new_size, Value::default());
+    }
+
+    pub fn extend(&mut self, other: &ValueVec)
+    {
+        self.values.extend(other.values.iter().map(|item| item.deep_clone()));
     }
 
     pub fn insert(&mut self, index: usize, value: Value)

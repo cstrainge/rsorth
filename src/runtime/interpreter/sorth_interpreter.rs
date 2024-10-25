@@ -4,7 +4,9 @@ use std::{ fs::{ metadata, canonicalize },
            rc::Rc };
 use crate::{ add_native_word,
              lang::{ code::{ /*pretty_print_code,*/ ByteCode, Op },
-                     compilation::{ process_source_from_tokens, CodeConstructor, CodeConstructorList },
+                     compilation::{ process_source_from_tokens,
+                                    CodeConstructor,
+                                    CodeConstructorList },
                      source_buffer::SourceLocation,
                      tokenizing::{ tokenize_from_file,
                                    tokenize_from_source,
@@ -20,7 +22,11 @@ use crate::{ add_native_word,
                                                          WordRuntime,
                                                          WordType,
                                                          WordVisibility },
-                                           value::{ DeepClone, ToValue, Value } },
+                                           value::{ DeepClone,
+                                                    ToValue,
+                                                    Value },
+                                            value_hash::ValueHashPtr,
+                                            value_vec::ValueVecPtr },
                         error::{ self, script_error, script_error_str },
                         interpreter::{ CallItem,
                                        CallStack,
@@ -248,6 +254,11 @@ impl InterpreterStack for SorthInterpreter
         Ok(value.get_int_val())
     }
 
+    fn pop_as_usize(&mut self) -> error::Result<usize>
+    {
+        Ok(self.pop_as_int()? as usize)
+    }
+
     fn pop_as_float(&mut self) -> error::Result<f64>
     {
         let value = self.pop()?;
@@ -282,6 +293,30 @@ impl InterpreterStack for SorthInterpreter
         }
 
         Ok(value.get_string_val())
+    }
+
+    fn pop_as_array(&mut self) -> error::Result<ValueVecPtr>
+    {
+        let value = self.pop()?;
+
+        if !value.is_vec()
+        {
+            script_error_str(self, "Expected an array.")?;
+        }
+
+        Ok(value.as_vec(self)?.clone())
+    }
+
+    fn pop_as_hash_map(&mut self) -> error::Result<ValueHashPtr>
+    {
+        let value = self.pop()?;
+
+        if !value.is_hash_map()
+        {
+            script_error_str(self, "Expected a hash map.")?;
+        }
+
+        Ok(value.as_hash_map(self)?.clone())
     }
 
     fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>
