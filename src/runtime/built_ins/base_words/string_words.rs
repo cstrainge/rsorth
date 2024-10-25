@@ -245,7 +245,7 @@ pub fn register_string_words(interpreter: &mut dyn Interpreter)
         "string -- updated_string");
 
     add_native_word!(interpreter, "string.find", word_string_find,
-        "Find the first instance of a string within another.  Pushes true and an index if found.  Just string.npos if not.",
+        "Find the first instance of a string within another. Index if found, npos if not.",
         "search_string string -- result");
 
     add_native_word!(interpreter, "string.[]@", word_string_index_read,
