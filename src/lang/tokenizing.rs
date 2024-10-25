@@ -285,9 +285,15 @@ fn process_literal(location: &SourceLocation, buffer: &mut SourceBuffer) -> erro
         Some('t') => Ok('\t'),
         Some('0') =>
             {
-                let number_str = String::new();
+                let mut number_str = String::new();
 
-                if let Ok(number) = number_str.parse::<char>()
+                while    let Some(next) = buffer.peek_next()
+                      && next.is_digit(10)
+                {
+                    number_str.push(buffer.next().unwrap());
+                }
+
+                if let Ok(number) = number_str.parse::<u8>()
                 {
                     Ok(number as char)
                 }
