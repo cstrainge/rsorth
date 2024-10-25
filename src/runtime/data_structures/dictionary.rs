@@ -6,7 +6,7 @@ use crate::runtime::data_structures::contextual_data::ContextualData;
 
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum WordRuntime
 {
     Immediate,
@@ -14,7 +14,7 @@ pub enum WordRuntime
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum WordType
 {
     Native,
@@ -22,7 +22,7 @@ pub enum WordType
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum WordVisibility
 {
     Visible,
@@ -30,7 +30,7 @@ pub enum WordVisibility
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct WordInfo
 {
     pub name: String,
@@ -250,17 +250,6 @@ impl Dictionary
         }
 
         None
-    }
-
-    fn top(&self) -> &SubDictionary
-    {
-        if self.stack.is_empty()
-        {
-            panic!("Reading from an empty context!");
-        }
-
-        let index = self.stack.len() - 1;
-        &self.stack[index]
     }
 
     fn top_mut(&mut self) -> &mut SubDictionary

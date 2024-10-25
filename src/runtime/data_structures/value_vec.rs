@@ -121,6 +121,11 @@ impl ValueVec
         Rc::new(RefCell::new(ValueVec { values }))
     }
 
+    pub fn iter(&self) -> std::collections::vec_deque::Iter<Value>
+    {
+        self.values.iter()
+    }
+
     pub fn len(&self) -> usize
     {
         self.values.len()

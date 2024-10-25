@@ -286,9 +286,9 @@ pub trait WordManagement
 
 
 
-pub struct SubThreadInfo
+/*pub struct SubThreadInfo
 {
-}
+}*/
 
 
 

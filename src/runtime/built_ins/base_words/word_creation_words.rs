@@ -2,7 +2,6 @@
 use std::rc::Rc;
 use crate::{ add_native_immediate_word,
              lang::{ code::ByteCode,
-                     source_buffer::SourceLocation,
                      tokenizing::Token },
              runtime::{ data_structures::dictionary::{ WordRuntime, WordType, WordVisibility },
                         error::{ self, script_error_str },
@@ -13,19 +12,17 @@ use crate::{ add_native_immediate_word,
 struct ScriptFunction
 {
     name: String,
-    location: SourceLocation,
     code: ByteCode
 }
 
 
 impl ScriptFunction
 {
-    pub fn new(name: String, location: SourceLocation, code: ByteCode) -> ScriptFunction
+    pub fn new(name: String, code: ByteCode) -> ScriptFunction
     {
         ScriptFunction
             {
                 name,
-                location,
                 code
             }
     }
@@ -101,7 +98,6 @@ fn word_end_word(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let construction = interpreter.context_mut().construction_pop()?;
 
     let new_function = ScriptFunction::new(construction.name.clone(),
-                                           construction.location.clone(),
                                            construction.code);
 
     interpreter.add_word(construction.location.path().clone(),
