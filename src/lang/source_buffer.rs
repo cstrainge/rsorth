@@ -69,6 +69,19 @@ impl SourceLocation
 
 
 
+#[macro_export]
+macro_rules! location_here
+{
+    () =>
+    {
+        crate::lang::source_buffer::SourceLocation::new_from_info(&file!().to_string(),
+                                                                  line!() as usize,
+                                                                  column!() as usize)
+    };
+}
+
+
+
 pub struct SourceBuffer<'a>
 {
     chars: Chars<'a>,

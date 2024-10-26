@@ -1,5 +1,6 @@
 
 use crate::{ add_native_word,
+             location_here,
              runtime::{ data_structures::{ value::ToValue,
                                            value_hash::ValueHash },
                                            error::{ self,
@@ -102,7 +103,7 @@ fn word_hash_table_iterate(interpreter: &mut dyn Interpreter) -> error::Result<(
         interpreter.push(key.clone());
         interpreter.push(value.clone());
 
-        interpreter.execute_word_index(&None, word_index)?;
+        interpreter.execute_word_index(&location_here!(), word_index)?;
     }
 
     Ok(())

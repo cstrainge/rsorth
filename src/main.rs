@@ -4,7 +4,7 @@
 #![feature(unboxed_closures)]
 
 
-
+#[macro_use]
 mod lang;
 mod runtime;
 
@@ -107,7 +107,7 @@ fn main() -> error::Result<()>
     }
     else
     {
-        interpreter.execute_word_named(&None, &"repl".to_string())?;
+        interpreter.execute_word_named(&location_here!(), &"repl".to_string())?;
     }
 
     Ok(())

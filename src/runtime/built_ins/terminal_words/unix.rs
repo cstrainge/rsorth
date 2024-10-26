@@ -55,6 +55,7 @@ pub fn word_term_raw_mode(interpreter: &mut dyn Interpreter) -> error::Result<()
                                      Error::last_os_error()))?;
             }
 
+            ORIGINAL_TERMIOS = Some(original_terminos);
             let mut raw = original_terminos;
 
             raw.c_iflag &= !(BRKINT | ICRNL | INPCK | ISTRIP | IXON);

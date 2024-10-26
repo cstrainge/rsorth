@@ -2,8 +2,7 @@
 use std::{ fs::{ metadata, canonicalize },
            path::{ Path, PathBuf },
            rc::Rc };
-use crate::{ add_native_word,
-             lang::{ code::{ /*pretty_print_code,*/ ByteCode, Op },
+use crate::{ add_native_word, lang::{ code::{ /*pretty_print_code,*/ ByteCode, Op },
                      compilation::{ process_source_from_tokens,
                                     CodeConstructor,
                                     CodeConstructorList },
@@ -12,8 +11,7 @@ use crate::{ add_native_word,
                                    tokenize_from_source,
                                    NumberType,
                                    Token,
-                                   TokenList } },
-             runtime::{ data_structures::{ contextual_data::ContextualData,
+                                   TokenList } }, location_here, runtime::{ data_structures::{ contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
                                                           DataObjectPtr },
@@ -465,7 +463,15 @@ impl SorthInterpreter
 
     fn execute_value(&mut self, value: &Value) -> error::Result<()>
     {
-        let location = self.current_location.clone();
+        let location =
+            if let Some(location) = self.current_location.clone()
+            {
+                location.clone()
+            }
+            else
+            {
+                location_here!()
+            };
 
         // Execute the value based on it's type.  It can either be a string name, or an index to the
         // handler.  Any other value type is invalid.
@@ -482,7 +488,7 @@ impl SorthInterpreter
                     {
                         Token::Word(location, word_name) =>
                             {
-                                self.execute_word_named(&Some(location.clone()), word_name)
+                                self.execute_word_named(&location.clone(), word_name)
                             },
 
                         _ =>
@@ -951,21 +957,12 @@ impl WordManagement for SorthInterpreter
     }
 
     fn execute_word_handler(&mut self,
-                            location: &Option<SourceLocation>,
+                            location: &SourceLocation,
                             word_handler_info: &WordHandlerInfo) -> error::Result<()>
     {
-        self.current_location = location.clone();
+        self.current_location = Some(location.clone());
 
-        let location = if let Some(location) = location
-            {
-                location.clone()
-            }
-            else
-            {
-                SourceLocation::new()
-            };
-
-        self.call_stack.push(CallItem::new(word_handler_info.name.clone(), location));
+        self.call_stack.push(CallItem::new(word_handler_info.name.clone(), location.clone()));
 
         let result = (*word_handler_info.handler)(self);
 
@@ -975,7 +972,7 @@ impl WordManagement for SorthInterpreter
     }
 
     fn execute_word(&mut self,
-                    location: &Option<SourceLocation>,
+                    location: &SourceLocation,
                     word: &WordInfo) -> error::Result<()>
     {
 
@@ -994,7 +991,7 @@ impl WordManagement for SorthInterpreter
     }
 
     fn execute_word_named(&mut self,
-                          location: &Option<SourceLocation>,
+                          location: &SourceLocation,
                           word: &String) -> error::Result<()>
     {
         let word_info = self.dictionary.try_get(word);
@@ -1010,7 +1007,7 @@ impl WordManagement for SorthInterpreter
     }
 
     fn execute_word_index(&mut self,
-                          location: &Option<SourceLocation>,
+                          location: &SourceLocation,
                           index: usize) -> error::Result<()>
     {
         let handler_info = self.word_handler_info(index);

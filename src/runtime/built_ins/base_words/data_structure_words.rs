@@ -1,5 +1,6 @@
 
 use crate::{ add_native_word,
+             location_here,
              runtime::{ data_structures::{ data_object::{ DataObjectDefinition,
                                                           DataObjectPtr },
                                            value::ToValue,
@@ -106,7 +107,7 @@ fn word_structure_iterate(interpreter: &mut dyn Interpreter) -> error::Result<()
         interpreter.push(data_ptr.borrow().definition_ptr.borrow().field_names()[index].to_value());
         interpreter.push(data_ptr.borrow().fields[index].clone());
 
-        interpreter.execute_word_index(&None, word_index)?;
+        interpreter.execute_word_index(&location_here!(), word_index)?;
     }
 
     Ok(())

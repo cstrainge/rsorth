@@ -265,17 +265,17 @@ pub trait WordManagement
     fn inverse_name_list(&self) -> Vec<String>;
 
     fn execute_word_handler(&mut self,
-                            location: &Option<SourceLocation>,
+                            location: &SourceLocation,
                             word_handler_info: &WordHandlerInfo) -> error::Result<()>;
 
     fn execute_word(&mut self,
-                    location: &Option<SourceLocation>,
+                    location: &SourceLocation,
                     word: &WordInfo) -> error::Result<()>;
     fn execute_word_named(&mut self,
-                          location: &Option<SourceLocation>,
+                          location: &SourceLocation,
                           word: &String) -> error::Result<()>;
     fn execute_word_index(&mut self,
-                          location: &Option<SourceLocation>,
+                          location: &SourceLocation,
                           index: usize) -> error::Result<()>;
 
     fn call_stack(&self) -> &CallStack;

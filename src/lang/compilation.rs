@@ -269,7 +269,7 @@ pub fn process_token(interpreter: &mut dyn Interpreter,
     {
         if let WordRuntime::Immediate = word_info.runtime
         {
-            interpreter.execute_word(&Some(location), &word_info.clone())?;
+            interpreter.execute_word(&location, &word_info.clone())?;
         }
         else
         {

@@ -1,6 +1,7 @@
 
 use crate::{ add_native_immediate_word,
              add_native_word,
+             location_here,
              lang::code::Op,
              runtime::{ data_structures::value::ToValue,
                         error::{ self, script_error },
@@ -45,13 +46,13 @@ fn word_execute(interpreter: &mut dyn Interpreter) -> error::Result<()>
     {
         let index = value.get_int_val();
 
-        interpreter.execute_word_index(&None, index as usize)?;
+        interpreter.execute_word_index(&location_here!(), index as usize)?;
     }
     else if value.is_stringable()
     {
         let word = value.get_string_val();
 
-        interpreter.execute_word_named(&None, &word)?;
+        interpreter.execute_word_named(&location_here!(), &word)?;
     }
     else
     {
