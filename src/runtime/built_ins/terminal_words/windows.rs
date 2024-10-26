@@ -190,8 +190,8 @@ pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
                                               Error::last_os_error()))?;
         }
 
-        interpreter.push(&(info.dwSize.X as i64).to_value());
-        interpreter.push(&(info.dwSize.Y as i64).to_value());
+        interpreter.push((info.dwSize.X as i64).to_value());
+        interpreter.push((info.dwSize.Y as i64).to_value());
     }
 
     Ok(())
@@ -227,7 +227,7 @@ pub fn word_term_key(interpreter: &mut dyn Interpreter) -> error::Result<()>
                 if key_event.bKeyDown != 0
                 {
                     let character = *key_event.uChar.AsciiChar() as u8 as char;
-                    interpreter.push(&character.to_string().to_value());
+                    interpreter.push(character.to_string().to_value());
                     break;
                 }
             }
