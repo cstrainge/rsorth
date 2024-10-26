@@ -87,8 +87,8 @@ pub fn register_terminal_words(interpreter: &mut dyn Interpreter)
         " -- ");
 
     add_native_word!(interpreter, "term.key", word_term_key,
-        "",
-        " -- ");
+        "Read a keypress from the terminal.",
+        " -- character");
 
     add_native_word!(interpreter, "term.flush", word_term_flush,
         "Flush the terminal buffers.",
