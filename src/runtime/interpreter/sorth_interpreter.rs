@@ -488,7 +488,7 @@ impl SorthInterpreter
                     {
                         Token::Word(location, word_name) =>
                             {
-                                self.execute_word_named(&location.clone(), word_name)
+                                self.execute_word_named(&location, word_name)
                             },
 
                         _ =>
