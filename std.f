@@ -57,6 +57,13 @@
 
 
 
+: defined? immediate description: "Check if a word is defined."
+                     signature: "defined? <word_name>"
+    word op.push_constant_value
+    ` defined? op.execute
+;
+
+
 
 : if immediate
     unique_str variable! else_label
@@ -134,6 +141,16 @@
 
 
 
+: break-if immediate description: "Breaks out of the loop if the condition is true."
+    if break then
+;
+
+: continue-if immediate description: "Continues to the next iteration of the loop if condition is true."
+    if continue then
+;
+
+
+
 
 : begin immediate description: "Defines loop until and loop repeat syntaxes."
                   signature: "begin <code> <test> until *or* begin <test> while <code> repeat"
@@ -176,7 +193,7 @@
 ;
 
 : repeat description: "The end of a begin/while/repeat block."
-    "repeate" sentinel_word
+    "repeat" sentinel_word
 ;
 
 
@@ -450,6 +467,13 @@
 
 
 
+: <> description: "Compare two values."
+     signature: "a b -- are-not-equal?"
+    = '
+;
+
+
+
 : clear description: "Clear out the stack."
         signature: " -- "
     begin
@@ -590,13 +614,6 @@
             then
         then
     then
-;
-
-
-
-: <> description: "Compare two values."
-     signature: "a b -- are-not-equal?"
-    = '
 ;
 
 
@@ -1803,6 +1820,7 @@
     user.os  "Linux"  =
 ;
 
+(
 [defined?] user.env@
 [if]
     [is-windows?]
@@ -1812,7 +1830,7 @@
         [include] std/user.f
     [then]
 [then]
-
+)
 
 
 
@@ -1888,7 +1906,7 @@
 
 
 ( Include the ffi system. )
-[include] std/ffi.f
+( [include] std/ffi.f )
 
 
 

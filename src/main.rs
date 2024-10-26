@@ -79,7 +79,7 @@ fn main() -> error::Result<()>
     register_user_words(&mut interpreter);
     register_ffi_words(&mut interpreter);
 
-    // interpreter.process_source_file(&"std.f".to_string())?;
+    interpreter.process_source_file(&"std.f".to_string())?;
 
     interpreter.mark_context();
 

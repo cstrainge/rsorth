@@ -48,12 +48,12 @@ fn word_data_definition(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
     for field in fields.borrow().iter()
     {
-        if !field.is_string()
+        if !field.is_stringable()
         {
             script_error_str(interpreter, "Field names must be strings.")?;
         }
 
-        field_names.push(field.as_string(interpreter)?.clone());
+        field_names.push(field.get_string_val().clone());
     }
 
     let defaults = defaults.borrow().iter().map(|value| value.clone()).collect();
@@ -101,9 +101,11 @@ fn word_structure_iterate(interpreter: &mut dyn Interpreter) -> error::Result<()
     let data_ptr = interpreter.pop_as_data_object()?;
     let word_index = interpreter.pop_as_usize()?;
 
-    for field in data_ptr.borrow().fields.iter()
+    for index in 0..data_ptr.borrow().fields.len()
     {
-        interpreter.push(field.clone());
+        interpreter.push(data_ptr.borrow().definition_ptr.borrow().field_names()[index].to_value());
+        interpreter.push(data_ptr.borrow().fields[index].clone());
+
         interpreter.execute_word_index(&None, word_index)?;
     }
 

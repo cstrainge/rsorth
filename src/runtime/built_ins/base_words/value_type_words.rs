@@ -42,9 +42,9 @@ fn word_value_is_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_value_is_structure(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let _value = interpreter.pop()?;
+    let value = interpreter.pop()?;
 
-    interpreter.push(false.to_value());
+    interpreter.push(value.is_data_object().to_value());
 
     Ok(())
 }

@@ -51,6 +51,7 @@ false variable! repl.is_quitting?
             ( Always make sure we get the newest version of the prompt.  That way the user can )
             ( change it at runtime. )
             cr "prompt" execute
+            term.flush
 
             ( Get the text from the user and execute it.  We are just using a really simple )
             ( implementation of readline for now. )

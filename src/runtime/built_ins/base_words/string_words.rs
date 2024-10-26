@@ -88,16 +88,10 @@ fn word_string_remove(interpreter: &mut dyn Interpreter) -> error::Result<()>
                                           char_count))?;
     }
 
-    if count < 0
+    if    count < 0
+       || ((position + count) >= char_count as i64)
     {
-        count = char_count as i64 - position;
-    }
-
-    if (position + count) > char_count as i64
-    {
-        script_error(interpreter, format!("Count {} is out of range for string length {}.",
-                                          count,
-                                          char_count))?;
+        count = char_count as i64 - position - 1;
     }
 
     let start_byte = char_indices[position as usize];
