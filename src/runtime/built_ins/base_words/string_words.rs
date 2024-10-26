@@ -215,7 +215,7 @@ fn word_unique_str(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     static INDEX: AtomicUsize = AtomicUsize::new(0);
 
-    let index =  INDEX.fetch_add(1, Ordering::Relaxed);
+    let index = INDEX.fetch_add(1, Ordering::SeqCst);
     let unique_str = format!("unique-str-{:08x}", index);
 
     interpreter.push(unique_str.to_value());

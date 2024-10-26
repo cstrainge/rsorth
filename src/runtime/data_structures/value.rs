@@ -231,6 +231,16 @@ impl ToValue for usize
 
 
 
+impl ToValue for u64
+{
+    fn to_value(&self) -> Value
+    {
+        Value::Int(*self as i64)
+    }
+}
+
+
+
 impl<T> From<Vec<T>> for Value
     where
         T: ToValue
