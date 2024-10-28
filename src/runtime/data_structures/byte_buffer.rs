@@ -309,7 +309,7 @@ impl Buffer for ByteBuffer
 
         if write_bytes < max_size
         {
-            for i in position..position + max_size - write_bytes
+            for i in position + write_bytes..position + max_size
             {
                 self.buffer[i] = 0;
             }
