@@ -23,14 +23,14 @@ foo.new fp !
 
 
 ( Assign some values to the first two fields. )
-1024           foo.a fp #!!
-"Hello world!" foo.b fp #!!
+1024           fp foo.a!!
+"Hello world!" fp foo.b!!
 
 
 ( Now fill out the rest of foo.c's bar fields. )
-150 bar.x foo.c fp #@@ #!
-250 bar.y foo.c fp #@@ #!
-350 bar.z foo.c fp #@@ #!
+150 fp foo.c@@ bar.x!
+250 fp foo.c@@ bar.y!
+350 fp foo.c@@ bar.z!
 
 ( Finally print the whole thing. )
 "Initialized struct(s):   " . fp @ .cr

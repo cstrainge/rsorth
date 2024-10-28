@@ -55,8 +55,8 @@ cr
 
 cr
 
-"--- Testing the ffi. ---" .cr
+( "--- Testing the ffi. ---" .cr )
 
-"tests/09_test_ffi.f" include
+( "tests/09_test_ffi.f" include )
 
-cr
+( cr )

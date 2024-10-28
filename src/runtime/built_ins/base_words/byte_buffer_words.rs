@@ -162,8 +162,8 @@ fn word_buffer_read_string(interpreter: &mut dyn Interpreter) -> error::Result<(
 
 fn word_buffer_set_position(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let position = interpreter.pop_as_usize()?;
     let buffer = interpreter.pop_as_byte_buffer()?;
+    let position = interpreter.pop_as_usize()?;
 
     if position > buffer.borrow().len()
     {

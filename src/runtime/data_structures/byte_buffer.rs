@@ -21,7 +21,7 @@ use crate::runtime::data_structures::value::{ DeepClone,
 /// sizes.
 ///
 /// This buffer should be most useful for binary data protocols and file formats.
-pub trait Buffer: Display
+pub trait Buffer
 {
     /// Get a reference to the buffer's raw bytes.
     fn bytes(&self) -> &[u8];
@@ -369,9 +369,9 @@ impl Display for ByteBuffer
 
             for index in 0..16
             {
-                if index == 9
+                if index == 8
                 {
-                    write!(f, "  ")?;
+                    write!(f, " ")?;
                 }
 
                 if index < chunk.len()
@@ -384,11 +384,13 @@ impl Display for ByteBuffer
                 }
             }
 
-            write!(f, " |")?;
+            write!(f, " | ")?;
 
             for &byte in chunk
             {
-                if !byte.is_ascii_control()
+                if    byte.is_ascii_alphanumeric()
+                   || byte.is_ascii_punctuation()
+                   || byte == ' ' as u8
                 {
                     write!(f, "{}", byte as char)?;
                 }
@@ -402,6 +404,8 @@ impl Display for ByteBuffer
             {
                 write!(f, " ")?;
             }
+
+            writeln!(f, " |")?;
         }
 
         Ok(())

@@ -4,7 +4,7 @@
 
 
 ( Print out the blank buffer. )
-bytes .cr cr
+bytes @ .cr
 
 
 ( Write a few values into the buffer. )
@@ -25,7 +25,7 @@ file.close
 
 
 ( Show the buffer as it is now. )
-bytes .cr
+bytes @ .cr
 
 
 ( Move the buffer index back to the beginning. )
