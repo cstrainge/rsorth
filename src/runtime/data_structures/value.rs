@@ -12,31 +12,55 @@ use crate::{ lang::{ tokenizing::{ NumberType, Token },
 
 
 
-
+/// Core value enumeration used by the Strange Forth interpreter.  This enumeration used to
+/// represent all data types that the interpreter and the underlying Forth code can understand and
+/// manipulate.
 #[derive(Clone, PartialOrd)]
 pub enum Value
 {
+    /// The value represents nothing and no data is associated.
     None,
+
+    /// We have an integer value.  Represented as an i64.
     Int(i64),
+
+    /// A floating-point value  Represented as a f64.
     Float(f64),
+
+    /// A boolean value.
     Bool(bool),
+
+    /// A string value, represented by a Rust string.
     String(String),
+
+    /// A vector of Values.  Handed by reference with a ValueVecPtr.
     Vec(ValueVecPtr),
+
+    /// A hash map of Values/Values.  Handled by reference with a ValueHashPtr.
     HashMap(ValueHashPtr),
+
+    /// A Forth structure.  Handled by reference with a DataObjectPtr.
     DataObject(DataObjectPtr),
+
+    /// A Forth source code token.
     Token(Token),
+
+    /// A block of interpreter byte-code.
     Code(ByteCode)
 }
 
 
 
+/// Convert an arbitrary data type to a Value.
 pub trait ToValue
 {
+    /// Implement to handle the actual conversion.
     fn to_value(&self) -> Value;
 }
 
 
 
+/// Convert a borrowed string into a Value.
 impl ToValue for &String
 {
     fn to_value(&self) -> Value
@@ -47,7 +71,7 @@ impl ToValue for &String
 }
 
 
-
+/// Allow code to create a default Value object.
 impl Default for Value
 {
     fn default() -> Value
@@ -60,10 +84,14 @@ impl Default for Value
 impl Eq for Value {}
 
 
+
+/// Manage equality for the Value enumeration.  This implements the various rules for value
+/// conversion when comparing two Values.
 impl PartialEq for Value
 {
     fn eq(&self, other: &Value) -> bool
     {
+        // If both are some kind of numbers attempt to manage the conversion.
         if Value::both_are_numeric(self, other)
         {
             if Value::either_is_float(self, other)
@@ -94,6 +122,8 @@ impl PartialEq for Value
         }
         else if self.is_stringable() && other.is_stringable()
         {
+            // It looks like it's possible to perform a simple string conversion, so compare the
+            // values based on that.
             let a = self.get_string_val();
             let b = other.get_string_val();
 
@@ -101,6 +131,8 @@ impl PartialEq for Value
         }
         else
         {
+            // Perform a direct comparison based on the other types, only actually attempting the
+            // comparison if they are both of the same type.
             match ( self, other )
             {
                 ( Value::Vec(a),        Value::Vec(b)        ) => *a.borrow() == *b.borrow(),
@@ -113,6 +145,7 @@ impl PartialEq for Value
 }
 
 
+/// Compute the hash for a Value.  Falling back on the actual value type the Value represents.
 impl Hash for Value
 {
     fn hash<H: Hasher>(&self, state: &mut H)
@@ -134,6 +167,7 @@ impl Hash for Value
 }
 
 
+/// Pretty print the value for display.
 impl Display for Value
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result
@@ -156,10 +190,12 @@ impl Display for Value
 
 
 
+/// Define implementations for converting between Values and the raw data types they represent.
 macro_rules! value_conversion
 {
     ($data_type:ty , $variant:ident , $as_ident:ident) =>
     {
+        /// Convert a value to the internal data type.
         impl Value
         {
             pub fn $as_ident(&self, interpreter: &dyn Interpreter) -> error::Result<&$data_type>
@@ -174,6 +210,8 @@ macro_rules! value_conversion
             }
         }
 
+
+        /// Allow conversion from a data type to a Value.
         impl ToValue for $data_type
         {
             fn to_value(&self) -> Value
@@ -182,6 +220,8 @@ macro_rules! value_conversion
             }
         }
 
+
+        /// Support converting from a data type to a Value.
         impl From<$data_type> for Value
         {
             fn from(original: $data_type) -> Value
@@ -190,6 +230,8 @@ macro_rules! value_conversion
             }
         }
 
+
+        // Also support converting from a Value to a data type.
         impl From<Value> for $data_type
         {
             fn from(original: Value) -> $data_type
@@ -207,6 +249,7 @@ macro_rules! value_conversion
 
 
 
+/// Hand implement ToValue for the NumberType token enumeration.
 impl ToValue for NumberType
 {
     fn to_value(&self) -> Value
@@ -221,6 +264,8 @@ impl ToValue for NumberType
 
 
 
+/// Convenience implementation for converting a usize to a Value.  The usize type is not represented
+/// directly in the Value enumeration, so it is converted to an i64 internally.
 impl ToValue for usize
 {
     fn to_value(&self) -> Value
@@ -231,6 +276,8 @@ impl ToValue for usize
 
 
 
+/// Convenience implementation for converting a u64 to a Value.  The u64 type is not represented
+/// directly in the Value enumeration, so it is converted to an i64 internally.
 impl ToValue for u64
 {
     fn to_value(&self) -> Value
@@ -241,6 +288,7 @@ impl ToValue for u64
 
 
 
+/// Used to convert a Vector of value compatible types to a ValueVec based Value.
 impl<T> From<Vec<T>> for Value
     where
         T: ToValue
@@ -254,6 +302,7 @@ impl<T> From<Vec<T>> for Value
 
 
 
+/// Used to convert reference to a Vector of value compatible types to a ValueVec based Value.
 impl<T> From<&Vec<T>> for Value
     where
         T: ToValue
@@ -267,6 +316,7 @@ impl<T> From<&Vec<T>> for Value
 
 
 
+// Implement the simple conversions for the value enumeration types.
 value_conversion!(i64,           Int,        as_int);
 value_conversion!(f64,           Float,      as_float);
 value_conversion!(bool,          Bool,       as_bool);
@@ -279,10 +329,12 @@ value_conversion!(ByteCode,      Code,       as_code);
 
 
 
+/// Handily implement variant checks for the types the Value enumeration supports.
 macro_rules! is_variant
 {
     ($name:ident , $either_name:ident , $variant:ident) =>
     {
+        /// Check if the value is the variant.
         pub fn $name(&self) -> bool
         {
             if let Value::$variant(ref _value) = self
@@ -295,6 +347,7 @@ macro_rules! is_variant
             }
         }
 
+        /// Check if either of the two values are the variant.
         pub fn $either_name(a: &Value, b: &Value) -> bool
         {
             a.$name() || b.$name()
@@ -306,16 +359,19 @@ macro_rules! is_variant
 
 impl Value
 {
+    /// Check if the value is the None variant.
     pub fn is_none(&self) -> bool
     {
         if let Value::None = self { true } else { false }
     }
 
+    /// Check if either of the two values are the None variant.
     pub fn either_is_none(a: &Value, b: &Value) -> bool
     {
         a.is_none() || b.is_none()
     }
 
+    // Create variant checks for the other supported types.
     is_variant!(is_int,         either_is_int,         Int);
     is_variant!(is_float,       either_is_float,       Float);
     is_variant!(is_bool,        either_is_bool,        Bool);
@@ -326,6 +382,8 @@ impl Value
     is_variant!(is_token,       either_is_token,       Token);
     is_variant!(is_code,        either_is_code,        Code);
 
+
+    /// Is the value any kind of numeric variant type?
     pub fn is_numeric(&self) -> bool
     {
         match self
@@ -344,11 +402,15 @@ impl Value
         }
     }
 
+
+    /// Are both value numeric types?
     pub fn both_are_numeric(a: &Value, b: &Value) -> bool
     {
         a.is_numeric() && b.is_numeric()
     }
 
+
+    // Does the Value represent a simply stringable type?
     pub fn is_stringable(&self) -> bool
     {
         match self
@@ -369,6 +431,8 @@ impl Value
         }
     }
 
+
+    /// Get a string that represents the value performing simple conversion if possible.
     pub fn get_string_val(&self) -> String
     {
         match self
@@ -388,6 +452,9 @@ impl Value
         }
     }
 
+
+    /// Convert the Value to a boolean value, performing simple tests if it's not directly a boolean
+    /// value.
     pub fn get_bool_val(&self) -> bool
     {
         match self
@@ -401,6 +468,9 @@ impl Value
         }
     }
 
+
+    /// Convert the value to an integer value.  Performing simple conversions if it's not directly
+    /// an integer value.  Only applicable to types that satisfy the is_numeric() test.
     pub fn get_int_val(&self) -> i64
     {
         match self
@@ -424,6 +494,9 @@ impl Value
         }
     }
 
+    /// Convert the value to an floating point value.  Performing simple conversions if it's not
+    /// directly an floating point value.  Only applicable to types that satisfy the is_numeric()
+    /// test.
     pub fn get_float_val(&self) -> f64
     {
         match self
@@ -452,6 +525,11 @@ impl Value
 
 impl Value
 {
+    /// Convert a string to a string that could be used directly within source code.  For example,
+    /// new lines are converted to the \n escape sequence, etc.  The string is also enclosed in
+    /// double quotes.
+    ///
+    /// Mainly used for debug, stack, and structure printing.
     pub fn stringify(text: &String) -> String
     {
         let mut result = String::new();
@@ -480,6 +558,9 @@ impl Value
 
 
 
+/// Implement the deep clone trait for the value enumeration and any sub-types that are handled by
+/// reference.  The normal clone() operation only clones the reference itself, not the data it
+/// contains.
 pub trait DeepClone
 {
     fn deep_clone(&self) -> Value;
@@ -487,6 +568,8 @@ pub trait DeepClone
 
 
 
+/// Implement the deep clone trait for the Value enumeration, defaulting to shallow copies for value
+/// types and deep copies for reference types.
 impl DeepClone for Value
 {
     fn deep_clone(&self) -> Value
@@ -511,10 +594,18 @@ impl DeepClone for Value
 
 thread_local!
 {
+    /// Keep track of the current indentation level for pretty printing more structured values.  For
+    /// example the HashMap and DataObject types use this to format their output.
+    ///
+    /// This value is thread safe and can be used for pretty printing values in multiple independent
+    /// threads.
     static VALUE_FORMAT_INDENT: RefCell<usize> = RefCell::new(0);
 }
 
 
+
+/// Get the current indentation level in spaces for pretty printing structured values.  See
+/// VALUE_FORMAT_INDENT for more details.
 pub fn value_format_indent() -> usize
 {
     let mut indent: usize = 0;
@@ -528,6 +619,8 @@ pub fn value_format_indent() -> usize
 }
 
 
+/// Increment the pretty printing indentation level for some values.  See VALUE_FORMAT_INDENT for
+/// more details.
 pub fn value_format_indent_inc()
 {
     VALUE_FORMAT_INDENT.with(|value|
@@ -537,6 +630,8 @@ pub fn value_format_indent_inc()
 }
 
 
+/// Decrement the pretty printing indentation level for some values.  See VALUE_FORMAT_INDENT for
+/// more details.
 pub fn value_format_indent_dec()
 {
     VALUE_FORMAT_INDENT.with(|value|

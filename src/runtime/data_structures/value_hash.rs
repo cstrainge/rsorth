@@ -17,6 +17,9 @@ use crate::runtime::data_structures::value::{ DeepClone,
 
 
 
+/// A hash table used for storing relational data as needed by user scripts.  Both the keys and
+/// values are Value types, allowing for a wide range of data types to be stored in the hash table.
+/// Including other sub hash tables.
 #[derive(Clone, Eq)]
 pub struct ValueHash
 {
@@ -24,9 +27,12 @@ pub struct ValueHash
 }
 
 
+/// A reference counted pointer to a ValueHash.  This is the type that is managed by scripts.
 pub type ValueHashPtr = Rc<RefCell<ValueHash>>;
 
 
+/// Is one ValueHash logically equal to another ValueHash?  This can potentially be an expensive
+/// operation.
 impl PartialEq for ValueHash
 {
     fn eq(&self, other: &ValueHash) -> bool
@@ -49,6 +55,7 @@ impl PartialEq for ValueHash
 }
 
 
+/// Useful for ordering operations.  This can potentially be an expensive operation.
 impl PartialOrd for ValueHash
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering>
@@ -70,6 +77,8 @@ impl PartialOrd for ValueHash
 }
 
 
+/// Allow the whole hash table to be hashed.  This can potentially be an expensive operation.
+/// However it can allow HashTables to be used as keys for other Hash tables.
 impl Hash for ValueHash
 {
     fn hash<H: Hasher>(&self, state: &mut H)
@@ -83,6 +92,7 @@ impl Hash for ValueHash
 }
 
 
+/// Make sure we can create a completely separate copy of the hash table.
 impl DeepClone for ValueHash
 {
     fn deep_clone(&self) -> Value
@@ -105,6 +115,7 @@ impl DeepClone for ValueHash
 }
 
 
+/// Make sure we can create a completely separate copy of hash table references.
 impl DeepClone for ValueHashPtr
 {
     fn deep_clone(&self) -> Value
@@ -114,6 +125,8 @@ impl DeepClone for ValueHashPtr
 }
 
 
+/// Pretty print the hash table while maintaining it's logical structure.  Otherwise it could be
+/// difficult to read.
 impl Display for ValueHash
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result
@@ -154,8 +167,10 @@ impl Display for ValueHash
 }
 
 
+/// Core implementation of the ValueHash type.
 impl ValueHash
 {
+    /// Create a new and empty ValueHash reference.
     pub fn new() -> ValueHashPtr
     {
         let hash = ValueHash
@@ -166,21 +181,31 @@ impl ValueHash
         Rc::new(RefCell::new(hash))
     }
 
+
+    /// Get the size of the hash table.
     pub fn len(&self) -> usize
     {
         self.values.len()
     }
 
+
+    /// Insert a key/value pair into the hash table, replacing the value if the key already exists.
+    /// The kee is left unchanged in that case.
     pub fn insert(&mut self, key: Value, value: Value)
     {
         self.values.insert(key, value);
     }
 
+
+    /// Try to get a value from the hash table by key.
     pub fn get(&self, key: &Value) -> Option<&Value>
     {
         self.values.get(key)
     }
 
+
+    /// Grow a hash table by adding all the other tables values.  Replacing existing values with any
+    /// overlapping keys.
     pub fn extend(&mut self, other: &ValueHash)
     {
         for ( key, value ) in other.values.iter()
@@ -189,6 +214,8 @@ impl ValueHash
         }
     }
 
+
+    /// Allow user code to iterate over the hash table.
     pub fn iter(&self) -> std::collections::hash_map::Iter<Value, Value>
     {
         self.values.iter()
