@@ -59,10 +59,10 @@ fn word_string_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let mut index = interpreter.pop_as_int()?;
     let sub_string = interpreter.pop_as_string()?;
 
-    if    index > string.len() as i64
+    if    index > string.chars().count() as i64
        || index < 0
     {
-        index = string.len() as i64 - 1;
+        index = string.chars().count() as i64 - 1;
     }
 
     string.insert_str(index as usize, &sub_string[0..sub_string.len()]);
