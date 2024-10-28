@@ -60,9 +60,9 @@ fn word_value_is_array(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_value_is_buffer(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let _value = interpreter.pop()?;
+    let value = interpreter.pop()?;
 
-    interpreter.push(false.to_value());
+    interpreter.push(value.is_byte_buffer().to_value());
 
     Ok(())
 }

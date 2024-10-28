@@ -24,6 +24,8 @@ use crate::{ lang::{ code::{ ByteCode,
                                            value_vec::ValueVecPtr },
                          error } };
 
+use super::data_structures::byte_buffer::ByteBufferPtr;
+
 
 
 pub mod sorth_interpreter;
@@ -150,6 +152,10 @@ pub trait InterpreterStack
     /// Pop the top value and attempt to convert it to a a data object, or aka a Forth struct.  If
     /// the value can not be converted an error is returned.  We also fail if the stack is empty.
     fn pop_as_data_object(&mut self) -> error::Result<DataObjectPtr>;
+
+    /// Pop the top value and attempt to convert it to a byte buffer.  If the value can not be
+    /// converted an error is returned.  We also fail if the stack is empty.
+    fn pop_as_byte_buffer(&mut self) -> error::Result<ByteBufferPtr>;
 
     /// Pop the top value and attempt to convert it to a code block.  If the value can not be
     /// converted an error is returned.  We also fail if the stack is empty.

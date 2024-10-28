@@ -15,20 +15,21 @@ use crate::{ add_native_word, location_here,
                                    NumberType,
                                    Token,
                                    TokenList } },
-             runtime::{ data_structures::{ contextual_data::ContextualData,
-                                            contextual_list::ContextualList,
-                                            data_object::{ DataDefinitionList,
-                                                           DataObjectPtr },
-                                            dictionary::{ Dictionary,
-                                                          WordInfo,
-                                                          WordRuntime,
-                                                          WordType,
-                                                          WordVisibility },
-                                            value::{ DeepClone,
-                                                     ToValue,
-                                                     Value },
-                                            value_hash::ValueHashPtr,
-                                            value_vec::ValueVecPtr },
+             runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
+                                           contextual_data::ContextualData,
+                                           contextual_list::ContextualList,
+                                           data_object::{ DataDefinitionList,
+                                                          DataObjectPtr },
+                                           dictionary::{ Dictionary,
+                                                         WordInfo,
+                                                         WordRuntime,
+                                                         WordType,
+                                                         WordVisibility },
+                                           value::{ DeepClone,
+                                                    ToValue,
+                                                    Value },
+                                           value_hash::ValueHashPtr,
+                                           value_vec::ValueVecPtr },
                         error::{ self,
                                  script_error,
                                  script_error_str },
@@ -333,6 +334,18 @@ impl InterpreterStack for SorthInterpreter
         }
 
         Ok(value.as_data_object(self)?.clone())
+    }
+
+    fn pop_as_byte_buffer(&mut self) -> error::Result<ByteBufferPtr>
+    {
+        let value = self.pop()?;
+
+        if !value.is_byte_buffer()
+        {
+            script_error_str(self, "Expected a byte buffer.")?;
+        }
+
+        Ok(value.as_byte_buffer(self)?.clone())
     }
 
     fn pop_as_code(&mut self) -> error::Result<ByteCode>

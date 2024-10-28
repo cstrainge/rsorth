@@ -4,7 +4,8 @@ use std::{ cell::RefCell,
            hash::{ Hash, Hasher } };
 use crate::{ lang::{ tokenizing::{ NumberType, Token },
                      code::{ ByteCode, pretty_print_code } },
-             runtime::{ data_structures::{ data_object::DataObjectPtr,
+             runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
+                                           data_object::DataObjectPtr,
                                            value_hash::ValueHashPtr,
                                            value_vec::{ ValueVec, ValueVecPtr } },
                         error::{ self, script_error },
@@ -41,6 +42,9 @@ pub enum Value
 
     /// A Forth structure.  Handled by reference with a DataObjectPtr.
     DataObject(DataObjectPtr),
+
+    /// A buffer for holding binary data.
+    ByteBuffer(ByteBufferPtr),
 
     /// A Forth source code token.
     Token(Token),
@@ -139,6 +143,10 @@ impl PartialEq for Value
                 ( Value::Vec(a),        Value::Vec(b)        ) => *a.borrow() == *b.borrow(),
                 ( Value::DataObject(a), Value::DataObject(b) ) => *a.borrow() == *b.borrow(),
                 ( Value::Token(a),      Value::Token(b)      ) => a == b,
+                ( Value::HashMap(a),    Value::HashMap(b)    ) => *a.borrow() == *b.borrow(),
+                ( Value::ByteBuffer(a), Value::ByteBuffer(b) ) => *a.borrow() == *b.borrow(),
+                ( Value::Code(a),       Value::Code(b)       ) => a == b,
+
                 _                                              => false
             }
         }
@@ -161,6 +169,7 @@ impl Hash for Value
             Value::Vec(value)        => value.borrow().hash(state),
             Value::HashMap(value)    => value.borrow().hash(state),
             Value::DataObject(value) => value.borrow().hash(state),
+            Value::ByteBuffer(value) => value.borrow().hash(state),
             Value::Token(value)      => value.hash(state),
             Value::Code(value)       => value.hash(state)
         }
@@ -183,6 +192,7 @@ impl Display for Value
             Value::Vec(value)        => write!(f, "{}", value.borrow()),
             Value::HashMap(value)    => write!(f, "{}", value.borrow()),
             Value::DataObject(value) => write!(f, "{}", value.borrow()),
+            Value::ByteBuffer(value) => write!(f, "{}", value.borrow()),
             Value::Token(value)      => write!(f, "{}", value),
             Value::Code(value)       => write!(f, "{}", pretty_print_code(None, value))
         }
@@ -325,6 +335,7 @@ value_conversion!(String,        String,     as_string);
 value_conversion!(ValueVecPtr,   Vec,        as_vec);
 value_conversion!(ValueHashPtr,  HashMap,    as_hash_map);
 value_conversion!(DataObjectPtr, DataObject, as_data_object);
+value_conversion!(ByteBufferPtr, ByteBuffer, as_byte_buffer);
 value_conversion!(Token,         Token,      as_token);
 value_conversion!(ByteCode,      Code,       as_code);
 
@@ -380,6 +391,7 @@ impl Value
     is_variant!(is_vec,         either_is_vec,         Vec);
     is_variant!(is_hash_map,    either_is_hash_map,    HashMap);
     is_variant!(is_data_object, either_is_data_object, DataObject);
+    is_variant!(is_byte_buffer, either_is_byte_buffer, ByteBuffer);
     is_variant!(is_token,       either_is_token,       Token);
     is_variant!(is_code,        either_is_code,        Code);
 
@@ -585,6 +597,7 @@ impl DeepClone for Value
             Value::Vec(value)        => value.deep_clone(),
             Value::HashMap(value)    => value.deep_clone(),
             Value::DataObject(value) => value.deep_clone(),
+            Value::ByteBuffer(value) => value.deep_clone(),
             Value::Token(value)      => Value::Token(value.clone()),
             Value::Code(value)       => Value::Code(value.clone())
         }
