@@ -74,8 +74,8 @@ fn word_data_definition(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_read_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let data_ptr = interpreter.pop_as_data_object()?;
     let index = interpreter.pop_as_usize()?;
+    let data_ptr = interpreter.pop_as_data_object()?;
 
     check_index(interpreter, &data_ptr, &index)?;
 
@@ -86,8 +86,8 @@ fn word_read_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_write_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let data_ptr = interpreter.pop_as_data_object()?;
     let index = interpreter.pop_as_usize()?;
+    let data_ptr = interpreter.pop_as_data_object()?;
     let value = interpreter.pop()?;
 
     check_index(interpreter, &data_ptr, &index)?;

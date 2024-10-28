@@ -69,14 +69,14 @@ impl PartialEq for Value
             if Value::either_is_float(self, other)
             {
                 let a = self.get_float_val();
-                let b = self.get_float_val();
+                let b = other.get_float_val();
 
                 a == b
             }
             else if Value::either_is_int(self, other)
             {
                 let a = self.get_int_val();
-                let b = self.get_int_val();
+                let b = other.get_int_val();
 
                 a == b
             }

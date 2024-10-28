@@ -121,7 +121,7 @@ pub fn word_term_key(interpreter: &mut dyn Interpreter) -> error::Result<()>
     {
         match handle.read_exact(&mut buffer)
         {
-            Ok(_) =>
+            Ok(()) =>
                 {
                     let character = buffer[0] as char;
                     interpreter.push(character.to_string().to_value());

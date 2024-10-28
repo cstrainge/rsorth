@@ -549,7 +549,7 @@ impl SorthInterpreter
     fn jump_if_match(&mut self,
                      pc: &mut usize,
                      relative_index: &Value,
-                     test_value: bool) -> error::Result<()>
+                     expected_value: bool) -> error::Result<()>
     {
         // Grab the test value from the stack and compute the absolute index from the instruction.
         // We pop from the stack first because we don't want the stack to be unbalanced even if
@@ -558,7 +558,7 @@ impl SorthInterpreter
         let absolute = self.absolute_index(*pc, relative_index)?;
 
         // Do we have a match?
-        if found_value == test_value
+        if found_value == expected_value
         {
             // Account for the increment that still happens at the end of the execution loop.
             *pc = absolute - 1;

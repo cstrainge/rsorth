@@ -54,17 +54,13 @@ fn word_term_is_printable(interpreter: &mut dyn Interpreter) -> error::Result<()
 
     if value.chars().count() != 1
     {
-        script_error_str(interpreter, "Expected a single character.")?;
+        return script_error_str(interpreter, "Expected a single character.");
     }
 
     let character = value.chars().next().unwrap();
-    let result =    character.is_ascii_graphic()
-                 || character == ' '
-                 || character == '\t'
-                 || character == '\n'
-                 || character == '\n';
+    let is_printable = !character.is_control();
 
-    interpreter.push(result.to_value());
+    interpreter.push(is_printable.to_value());
 
     Ok(())
 }

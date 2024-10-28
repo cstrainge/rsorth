@@ -153,7 +153,7 @@ fn word_print_structures(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_sorth_version(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    interpreter.push(env!("CARGO_PKG_VERSION").to_string().to_value());
+    interpreter.push((env!("CARGO_PKG_VERSION").to_string() + ".rust").to_value());
     Ok(())
 }
 

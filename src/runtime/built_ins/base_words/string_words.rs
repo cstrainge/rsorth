@@ -97,7 +97,7 @@ fn word_string_remove(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let start_byte = char_indices[position as usize];
     let end_byte = char_indices[(position + count) as usize];
 
-    string.drain(start_byte..end_byte);
+    string.drain(start_byte..=end_byte);
 
     interpreter.push(string.to_value());
 
@@ -201,6 +201,19 @@ fn word_hex(interpreter: &mut dyn Interpreter) -> error::Result<()>
         else if value.is_numeric()
         {
             value.get_int_val()
+        }
+        else if value.is_string()
+        {
+            let value = value.get_string_val();
+
+            if value.len() == 1
+            {
+                value.chars().next().unwrap() as i64
+            }
+            else
+            {
+                0
+            }
         }
         else
         {

@@ -5,7 +5,7 @@ use std::{ cmp::Ordering,
            cell::RefCell,
            hash::{ Hash, Hasher } };
 use crate::{ lang::source_buffer::SourceLocation,
-             runtime::{ error,
+             runtime::{ error::{ self, script_error },
                         data_structures::{ contextual_list::ContextualList,
                                            dictionary::{ WordRuntime,
                                                          WordType,
@@ -97,6 +97,20 @@ impl DataObjectDefinition
                              visibility.clone(),
                              WordType::Native);
 
+        fn validate_index(interpreter: &dyn Interpreter,
+                          var_index: &usize) -> error::Result<()>
+        {
+            if *var_index >= interpreter.variables().len()
+            {
+                script_error(interpreter,
+                             format!("Index {} out of range for variable list {}.",
+                                     var_index,
+                                     interpreter.variables().len()))?;
+            }
+
+            Ok(())
+        }
+
         for ( index, field_name ) in definition_ptr.borrow().field_names.iter().enumerate()
         {
             let field_index_accessor = Rc::new(move |interpreter: &mut dyn Interpreter| -> error::Result<()>
@@ -129,6 +143,8 @@ impl DataObjectDefinition
                     let value = interpreter.pop()?;
                     let data_ptr = interpreter.variables()[var_index].as_data_object(interpreter)?;
 
+                    validate_index(interpreter, &var_index)?;
+
                     data_ptr.borrow_mut().fields[index] = value;
                     Ok(())
                 });
@@ -140,6 +156,8 @@ impl DataObjectDefinition
                     let data_ptr = interpreter.variables()[var_index]
                                               .as_data_object(interpreter)?
                                               .clone();
+
+                    validate_index(interpreter, &var_index)?;
 
                     interpreter.push(data_ptr.borrow().fields[index].clone());
                     Ok(())
@@ -159,7 +177,7 @@ impl DataObjectDefinition
             interpreter.add_word(path.clone(),
                                  line.clone(),
                                  column.clone(),
-                                 format!("{}.{}@", struct_name, field_name),
+                                 format!("{}.{}!", struct_name, field_name),
                                  field_writer,
                                  format!("Write to the structure {} field {}.",
                                          struct_name,
@@ -172,7 +190,7 @@ impl DataObjectDefinition
             interpreter.add_word(path.clone(),
                                  line.clone(),
                                  column.clone(),
-                                 format!("{}.{}!", struct_name, field_name),
+                                 format!("{}.{}@", struct_name, field_name),
                                  field_reader,
                                  format!("Read from the structure {} field {}.",
                                          struct_name,
@@ -185,7 +203,7 @@ impl DataObjectDefinition
             interpreter.add_word(path.clone(),
                                  line.clone(),
                                  column.clone(),
-                                 format!("{}.{}@@", struct_name, field_name),
+                                 format!("{}.{}!!", struct_name, field_name),
                                  var_field_writer,
                                  format!("Write to the structure variable {} field {}.",
                                          struct_name,
@@ -198,7 +216,7 @@ impl DataObjectDefinition
             interpreter.add_word(path.clone(),
                                  line.clone(),
                                  column.clone(),
-                                 format!("{}.{}!!", struct_name, field_name),
+                                 format!("{}.{}@@", struct_name, field_name),
                                  var_field_reader,
                                  format!("Read from the structure variable {} field {}.",
                                          struct_name,
@@ -359,7 +377,7 @@ impl DataObject
 
         for index in 0..fields.len()
         {
-            fields[index] = definition.defaults[index].clone();
+            fields[index] = definition.defaults[index].deep_clone();
         }
 
         let data_object = DataObject
