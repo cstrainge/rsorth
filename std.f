@@ -1820,7 +1820,7 @@
     user.os  "Linux"  =
 ;
 
-(
+
 [defined?] user.env@
 [if]
     [is-windows?]
@@ -1830,7 +1830,7 @@
         [include] std/user.f
     [then]
 [then]
-)
+
 
 
 
