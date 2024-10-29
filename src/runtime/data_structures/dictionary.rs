@@ -2,7 +2,7 @@
 use std::{ collections::HashMap,
            fmt::{ self, Display, Formatter },
            ops::{ Index, IndexMut } };
-use crate::runtime::data_structures::contextual_data::ContextualData;
+use crate::{lang::source_buffer::SourceLocation, runtime::data_structures::contextual_data::ContextualData};
 
 
 
@@ -50,6 +50,9 @@ pub enum WordVisibility
 #[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct WordInfo
 {
+    /// The location in the source code where the word was defined.
+    pub location: SourceLocation,
+
     /// The name of the word.
     pub name: String,
 
@@ -79,10 +82,11 @@ pub struct WordInfo
 impl WordInfo
 {
     /// Create a new WordInfo with default values.
-    pub fn new() -> WordInfo
+    pub fn new(location: SourceLocation) -> WordInfo
     {
         WordInfo
             {
+                location,
                 name: String::new(),
                 runtime: WordRuntime::Normal,
                 word_type: WordType::Native,

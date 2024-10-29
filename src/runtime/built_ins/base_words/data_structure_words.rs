@@ -1,7 +1,8 @@
 
 use crate::{ add_native_word,
              location_here,
-             runtime::{ data_structures::{ data_object::{ DataObjectDefinition,
+             runtime::{ data_structures::{ data_object::{ DataObject,
+                                                          DataObjectDefinition,
                                                           DataObjectPtr },
                                            value::ToValue,
                                            value_vec::ValueVec },
@@ -59,7 +60,8 @@ fn word_data_definition(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
     let defaults = defaults.borrow().iter().map(|value| value.clone()).collect();
 
-    let definition_ptr = DataObjectDefinition::new(name,
+    let definition_ptr = DataObjectDefinition::new(interpreter,
+                                                   name,
                                                    field_names,
                                                    defaults,
                                                    is_hidden.clone());
@@ -142,6 +144,53 @@ fn word_structure_compare(interpreter: &mut dyn Interpreter) -> error::Result<()
 
 
 
+fn register_word_info_struct(interpreter: &mut dyn Interpreter)
+{
+    let location = DataObjectDefinition::new(interpreter,
+                                             "sorth.location".to_string(),
+                                             vec![ "path".to_string(),
+                                                   "line".to_string(),
+                                                   "column".to_string() ],
+                                             vec![ "".to_string().to_value(),
+                                                   1usize.to_value(),
+                                                   1usize.to_value() ],
+                                             true);
+
+    let default_location = DataObject::new(&location);
+
+    DataObjectDefinition::create_data_definition_words(interpreter,
+                                                       Some(location_here!()),
+                                                       location,
+                                                       true);
+
+    let word_info = DataObjectDefinition::new(interpreter,
+                                              "sorth.word".to_string(),
+                                              vec![ "name".to_string(),
+                                                    "is_immediate".to_string(),
+                                                    "is_scripted".to_string(),
+                                                    "is_visible".to_string(),
+                                                    "description".to_string(),
+                                                    "signature".to_string(),
+                                                    "handler_index".to_string(),
+                                                    "location".to_string() ],
+                                              vec![ "".to_string().to_value(),
+                                                    false.to_value(),
+                                                    false.to_value(),
+                                                    false.to_value(),
+                                                    "".to_string().to_value(),
+                                                    "".to_string().to_value(),
+                                                    0usize.to_value(),
+                                                    default_location.to_value() ],
+                                              true);
+
+    DataObjectDefinition::create_data_definition_words(interpreter,
+                                                       Some(location_here!()),
+                                                       word_info,
+                                                       true);
+}
+
+
+
 pub fn register_data_structure_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "#", word_data_definition,
@@ -167,4 +216,6 @@ pub fn register_data_structure_words(interpreter: &mut dyn Interpreter)
     add_native_word!(interpreter, "#.=", word_structure_compare,
         "Check if two structures are the same.",
         "a b -- boolean");
+
+    register_word_info_struct(interpreter);
 }

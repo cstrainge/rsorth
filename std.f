@@ -1853,7 +1853,7 @@
     : show_word
         variable! name
 
-        words.get{} { name @ }@
+        words.get{} { name @ to_string }@
 
                dup sorth.word.handler_index@
           swap dup sorth.word.name@
@@ -1870,6 +1870,11 @@
           Description: {}
           Signature:   {}*"
         string.format .cr
+
+        dup sorth.word.is_visible@ '
+        if
+            "\n             The word is hidden." .
+        then
 
         dup sorth.word.is_immediate@
         if

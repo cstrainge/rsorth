@@ -19,6 +19,7 @@ use crate::{ add_native_word, location_here,
                                            contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
+                                                          DataObjectDefinitionPtr,
                                                           DataObjectPtr },
                                            dictionary::{ Dictionary,
                                                          WordInfo,
@@ -181,6 +182,11 @@ impl Interpreter for SorthInterpreter
     fn dictionary(&self) -> &Dictionary
     {
         &self.dictionary
+    }
+
+    fn structure_definitions(&self) -> &DataDefinitionList
+    {
+        &self.data_definitions
     }
 
     fn reset(&mut self) -> error::Result<()>
@@ -362,7 +368,7 @@ impl InterpreterStack for SorthInterpreter
 
     fn pick(&mut self, index: usize) -> error::Result<Value>
     {
-        let value = self.stack.remove(index);
+        let value = self.stack.remove(self.stack.len() - 1 - index);
         return Ok(value);
     }
 
@@ -370,7 +376,7 @@ impl InterpreterStack for SorthInterpreter
     {
         if let Some(value) = self.stack.pop()
         {
-            self.stack.insert(index, value);
+            self.stack.insert(self.stack.len() - index, value);
         }
         else
         {
@@ -938,8 +944,8 @@ impl WordManagement for SorthInterpreter
                 visibility: WordVisibility,
                 word_type: WordType)
     {
-        let mut word_info = WordInfo::new();
         let location = SourceLocation::new_from_info(&file, line, column);
+        let mut word_info = WordInfo::new(location.clone());
 
         let info = WordHandlerInfo::new(name.clone(), location, handler);
         let index = self.word_handlers.insert(info);
@@ -953,6 +959,11 @@ impl WordManagement for SorthInterpreter
         word_info.handler_index = index;
 
         self.dictionary.insert(name, word_info);
+    }
+
+    fn add_structure_definition(&mut self, definition_ptr: DataObjectDefinitionPtr)
+    {
+        self.data_definitions.insert(definition_ptr);
     }
 
     fn find_word(&self, word: &String) -> Option<&WordInfo>

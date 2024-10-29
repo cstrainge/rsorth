@@ -1,5 +1,6 @@
 
-use std::ops::{ Index, IndexMut };
+use std::{ ops::{ Index, IndexMut },
+           slice::{ Iter, IterMut } };
 use crate::runtime::data_structures::contextual_data::ContextualData;
 
 
@@ -132,6 +133,37 @@ impl<T> IndexMut<usize> for ContextualList<T>
 }
 
 
+/// Allow for iterating over the entire list.
+impl<'a, T> IntoIterator for &'a ContextualList<T>
+    where
+        T: Clone
+{
+    type Item = &'a T;
+    type IntoIter = ContextualListIterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter()
+    }
+}
+
+
+/// Allow for mutably iterating over the entire list.
+impl<'a, T> IntoIterator for &'a mut ContextualList<T>
+    where
+        T: Clone
+{
+    type Item = &'a mut T;
+    type IntoIter = ContextualListIteratorMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.iter_mut()
+    }
+}
+
+
+/// Core implementation of the ContextualList type.
 impl<T> ContextualList<T>
     where
         T: Clone
@@ -151,7 +183,6 @@ impl<T> ContextualList<T>
         new_list
     }
 
-
     /// Get the length of the entire list, regardless of the current context.
     pub fn len(&self) -> usize
     {
@@ -166,6 +197,25 @@ impl<T> ContextualList<T>
         }
     }
 
+    /// Get an iterator for the entire list.
+    pub fn iter(&self) -> ContextualListIterator<'_, T>
+    {
+        ContextualListIterator
+            {
+                outer_iter: self.list_stack.iter(),
+                inner_iter: None
+            }
+    }
+
+    /// Get a mutable iterator for the entire list.
+    pub fn iter_mut(&mut self) -> ContextualListIteratorMut<'_, T>
+    {
+        ContextualListIteratorMut
+            {
+                outer_iter: self.list_stack.iter_mut(),
+                inner_iter: None
+            }
+    }
 
     /// Insert a new value into the end of the list, returning the item's new index.  This will
     /// panic if there are no contexts in the list.
@@ -176,7 +226,6 @@ impl<T> ContextualList<T>
         top.items.push(value);
         self.len() - 1
     }
-
 
     /// Internal use only, get the top context of the list.
     fn top(&self) -> &SubList<T>
@@ -190,7 +239,6 @@ impl<T> ContextualList<T>
         &self.list_stack[index]
     }
 
-
     /// Internal use only, get a mutable reference to the top context of the list.
     fn top_mut(&mut self) -> &mut SubList<T>
     {
@@ -201,5 +249,99 @@ impl<T> ContextualList<T>
 
         let index = self.list_stack.len() - 1;
         &mut self.list_stack[index]
+    }
+}
+
+
+
+/// Iterator for the ContextualList type.
+pub struct ContextualListIterator<'a, T>
+    where
+        T: Clone
+{
+    outer_iter: Iter<'a, SubList<T>>,
+    inner_iter: Option<Iter<'a, T>>
+}
+
+
+impl<'a, T> Iterator for ContextualListIterator<'a, T>
+    where
+        T: Clone
+{
+    type Item = &'a T;
+
+    /// Get the next item in the list, regardless of the current context.
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        loop
+        {
+            if let Some(ref mut inner) = self.inner_iter
+            {
+                if let Some(item) = inner.next()
+                {
+                    return Some(item);
+                }
+            }
+
+            match self.outer_iter.next()
+            {
+                Some(sub_list) =>
+                    {
+                        self.inner_iter = Some(sub_list.items.iter());
+                    },
+
+                None =>
+                    {
+                        return None;
+                    }
+            }
+        }
+    }
+}
+
+
+
+/// Mutable iterator for the ContextualList type.
+pub struct ContextualListIteratorMut<'a, T>
+    where
+        T: Clone
+{
+    outer_iter: IterMut<'a, SubList<T>>,
+    inner_iter: Option<IterMut<'a, T>>
+}
+
+
+impl<'a, T> Iterator for ContextualListIteratorMut<'a, T>
+    where
+        T: Clone
+{
+    type Item = &'a mut T;
+
+    /// Get the next item in the list, regardless of the current context.
+    fn next(&mut self) -> Option<Self::Item>
+    {
+        loop
+        {
+            if let Some(ref mut inner) = self.inner_iter
+            {
+                if let Some(item) = inner.next()
+                {
+                    return Some(item);
+                }
+            }
+
+            match self.outer_iter.next()
+            {
+                Some(sub_list) =>
+                    {
+                        self.inner_iter = Some(sub_list.items.iter_mut());
+                    },
+
+                None =>
+                    {
+                        return None;
+                    }
+            }
+        }
     }
 }

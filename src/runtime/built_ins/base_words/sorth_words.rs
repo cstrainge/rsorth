@@ -148,7 +148,12 @@ fn word_thread_show(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 fn word_print_structures(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    script_error(interpreter, format!("Word {} not implemented yet.", "word_print_structures"))
+    for structure in interpreter.structure_definitions()
+    {
+        println!("{}", structure.borrow());
+    }
+
+    Ok(())
 }
 
 fn word_sorth_version(interpreter: &mut dyn Interpreter) -> error::Result<()>

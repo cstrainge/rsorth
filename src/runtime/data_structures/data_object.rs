@@ -45,11 +45,28 @@ pub type DataDefinitionList = ContextualList<DataObjectDefinitionPtr>;
 
 
 
+/// Display for the DataObjectDefinition structure.
+impl Display for DataObjectDefinition
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result
+    {
+        write!(f, "# {}", self.name)?;
+
+        for field in &self.field_names
+        {
+            write!(f, " {}", field)?;
+        }
+
+        write!(f, " ;")
+    }
+}
+
 
 impl DataObjectDefinition
 {
     /// Create a new DataObjectDefinition reference.
-    pub fn new(name: String,
+    pub fn new(interpreter: &mut dyn Interpreter,
+               name: String,
                field_names: Vec<String>,
                defaults: Vec<Value>,
                is_hidden: bool) -> DataObjectDefinitionPtr
@@ -63,7 +80,11 @@ impl DataObjectDefinition
                 visibility: if is_hidden { WordVisibility::Hidden } else { WordVisibility::Visible }
             };
 
-        Rc::new(RefCell::new(definition))
+        let definition_ptr = Rc::new(RefCell::new(definition));
+
+        interpreter.add_structure_definition(definition_ptr.clone());
+
+        definition_ptr
     }
 
 
@@ -89,7 +110,7 @@ impl DataObjectDefinition
     }
 
 
-    /// Should this strcure and it's helper words be hidden from the user directory?
+    /// Should this structure and it's helper words be hidden from the user directory?
     pub fn visibility(&self) -> &WordVisibility
     {
         &self.visibility
@@ -162,7 +183,7 @@ impl DataObjectDefinition
 
         let given_definition = definition_ptr.clone();
 
-        // Register the strucure creation word.
+        // Register the structure creation word.
         interpreter.add_word(path.clone(),
                              line.clone(),
                              column.clone(),
@@ -237,7 +258,7 @@ impl DataObjectDefinition
                     Ok(())
                 });
 
-            // Read from a field from a structure variabvle found on the stack.
+            // Read from a field from a structure variable found on the stack.
             let var_field_reader = Rc::new(move |interpreter: &mut dyn Interpreter|
                                                                                 -> error::Result<()>
                 {
@@ -434,7 +455,14 @@ impl Display for DataObject
                    "{:width$}{} -> {} {}\n",
                    "",
                    self.definition_ptr.borrow().field_names[index],
-                   self.fields[index],
+                   if self.fields[index].is_string()
+                   {
+                       Value::stringify(&self.fields[index].get_string_val())
+                   }
+                   else
+                   {
+                       self.fields[index].to_string()
+                   },
                    if index < self.fields.len() - 1 { "," } else { "" },
                    width = value_format_indent())?;
         }

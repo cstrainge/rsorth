@@ -11,9 +11,12 @@ use crate::{ lang::{ code::{ ByteCode,
                      tokenizing::{ NumberType,
                                    Token,
                                    TokenList } },
-             runtime::{ data_structures::{ contextual_data::ContextualData,
+             runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
+                                           contextual_data::ContextualData,
                                            contextual_list::ContextualList,
-                                           data_object::DataObjectPtr,
+                                           data_object::{ DataDefinitionList,
+                                                          DataObjectDefinitionPtr,
+                                                          DataObjectPtr },
                                            dictionary::{ Dictionary,
                                                          WordInfo,
                                                          WordRuntime,
@@ -23,8 +26,6 @@ use crate::{ lang::{ code::{ ByteCode,
                                            value_hash::ValueHashPtr,
                                            value_vec::ValueVecPtr },
                          error } };
-
-use super::data_structures::byte_buffer::ByteBufferPtr;
 
 
 
@@ -407,6 +408,10 @@ pub trait WordManagement
                 word_type: WordType);
 
 
+    /// Add a new structure definition to the definition list.
+    fn add_structure_definition(&mut self, definition_ptr: DataObjectDefinitionPtr);
+
+
     //// Find a word in the interpreter's dictionary by name.
     fn find_word(&self, word: &String) -> Option<&WordInfo>;
 
@@ -522,6 +527,9 @@ pub trait Interpreter : ContextualData +
 
     /// The current word dictionary of words known to the interpreter.
     fn dictionary(&self) -> &Dictionary;
+
+    /// The current list of data object definitions known to the interpreter.
+    fn structure_definitions(&self) -> &DataDefinitionList;
 
 
     /// Reset the interpreter to a prior context state, while also clearing the data stack.  After
