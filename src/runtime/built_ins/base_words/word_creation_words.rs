@@ -3,8 +3,12 @@ use std::rc::Rc;
 use crate::{ add_native_immediate_word,
              lang::{ code::ByteCode,
                      tokenizing::Token },
-             runtime::{ data_structures::dictionary::{ WordRuntime, WordType, WordVisibility },
-                        error::{ self, script_error_str },
+             runtime::{ data_structures::dictionary::{ WordContext,
+                                                       WordRuntime,
+                                                       WordType,
+                                                       WordVisibility },
+                        error::{ self,
+                                 script_error_str },
                         interpreter::Interpreter } };
 
 
@@ -15,6 +19,9 @@ struct ScriptFunction
     /// The name of the word.
     name: String,
 
+    /// The context management of the word.
+    context: WordContext,
+
     /// The byte-code for the word.
     code: ByteCode
 }
@@ -23,11 +30,12 @@ struct ScriptFunction
 impl ScriptFunction
 {
     /// Create the new ScriptFunction handler.
-    pub fn new(name: String, code: ByteCode) -> ScriptFunction
+    pub fn new(name: String, context: WordContext, code: ByteCode) -> ScriptFunction
     {
         ScriptFunction
             {
                 name,
+                context,
                 code
             }
     }
@@ -39,9 +47,17 @@ impl Fn<( &mut dyn Interpreter, )> for ScriptFunction
 {
     extern "rust-call" fn call(&self, args: ( &mut dyn Interpreter, ) ) -> error::Result<()>
     {
-        args.0.mark_context();
+        if let WordContext::Managed = self.context
+        {
+            args.0.mark_context();
+        }
+
         let result = args.0.execute_code(&self.name, &self.code);
-        args.0.release_context();
+
+        if let WordContext::Managed = self.context
+        {
+            args.0.release_context();
+        }
 
         result
     }
@@ -53,9 +69,18 @@ impl FnMut<( &mut dyn Interpreter, )> for ScriptFunction
 {
     extern "rust-call" fn call_mut(&mut self, args: ( &mut dyn Interpreter, )) -> error::Result<()>
     {
-        args.0.mark_context();
+
+        if let WordContext::Managed = self.context
+        {
+            args.0.mark_context();
+        }
+
         let result = args.0.execute_code(&self.name, &self.code);
-        args.0.release_context();
+
+        if let WordContext::Managed = self.context
+        {
+            args.0.release_context();
+        }
 
         result
     }
@@ -69,9 +94,18 @@ impl FnOnce<( &mut dyn Interpreter, )> for ScriptFunction
 
     extern "rust-call" fn call_once(self, args: ( &mut dyn Interpreter, )) -> error::Result<()>
     {
-        args.0.mark_context();
+
+        if let WordContext::Managed = self.context
+        {
+            args.0.mark_context();
+        }
+
         let result = args.0.execute_code(&self.name, &self.code);
-        args.0.release_context();
+
+        if let WordContext::Managed = self.context
+        {
+            args.0.release_context();
+        }
 
         result
     }
@@ -108,6 +142,7 @@ fn word_end_word(interpreter: &mut dyn Interpreter) -> error::Result<()>
     let construction = interpreter.context_mut().construction_pop()?;
 
     let new_function = ScriptFunction::new(construction.name.clone(),
+                                           construction.context,
                                            construction.code);
 
     interpreter.add_word(construction.location.path().clone(),
@@ -135,6 +170,13 @@ fn word_immediate(interpreter: &mut dyn Interpreter) -> error::Result<()>
 fn word_hidden(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.context_mut().construction_mut()?.visibility = WordVisibility::Hidden;
+    Ok(())
+}
+
+/// Mark the current word being generated as not using the automatic context management.
+fn word_contextless(interpreter: &mut dyn Interpreter) -> error::Result<()>
+{
+    interpreter.context_mut().construction_mut()?.context = WordContext::Manual;
     Ok(())
 }
 
@@ -175,6 +217,10 @@ pub fn register_word_creation_words(interpreter: &mut dyn Interpreter)
 
     add_native_immediate_word!(interpreter, "hidden", word_hidden,
         "Mark the new word as hidden from the directory.",
+        " -- ");
+
+    add_native_immediate_word!(interpreter, "contextless", word_contextless,
+        "Mark the new word as not using the automatic context management.",
         " -- ");
 
     add_native_immediate_word!(interpreter, "description:", word_description,

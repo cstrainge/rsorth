@@ -1,12 +1,18 @@
 
 use std::collections::HashMap;
-use crate::{ lang::{ code::{ ByteCode, Instruction, Op },
+use crate::{ lang::{ code::{ ByteCode,
+                             Instruction,
+                             Op },
                      source_buffer::SourceLocation,
-                     tokenizing::{ Token, TokenList } },
-             runtime::{ data_structures::{ dictionary::{ WordRuntime,
+                     tokenizing::{ Token,
+                                   TokenList } },
+             runtime::{ data_structures::{ dictionary::{ WordContext,
+                                                         WordRuntime,
                                                          WordVisibility },
-                                           value::{ ToValue, Value } },
-                        error::{ self, ScriptError },
+                                           value::{ ToValue,
+                                                    Value } },
+                        error::{ self,
+                                 ScriptError },
                         interpreter::Interpreter } };
 
 
@@ -22,6 +28,9 @@ pub struct Construction
 
     /// If a word is being generated, this is whether the word is visible in the directory listing.
     pub visibility: WordVisibility,
+
+    /// How should the new word's context be managed?
+    pub context: WordContext,
 
 
     /// The name of the word being generated.
@@ -51,6 +60,7 @@ impl Construction
             {
                 runtime: WordRuntime::Normal,
                 visibility: WordVisibility::Visible,
+                context: WordContext::Managed,
 
                 name: String::new(),
                 location: SourceLocation::new(),

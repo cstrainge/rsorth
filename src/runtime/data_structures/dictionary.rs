@@ -46,6 +46,19 @@ pub enum WordVisibility
 
 
 
+/// Decide how the word's variable and word context should be managed.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
+pub enum WordContext
+{
+    /// The word's context is automatically managed by the interpreter.  This is the default.
+    Managed,
+
+    /// The words context is managed by the word itself.
+    Manual
+}
+
+
+
 /// The information stored in the Strange Forth word dictionary for each word.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct WordInfo
@@ -65,6 +78,9 @@ pub struct WordInfo
 
     /// Is the word visible in the directory listing?
     pub visibility: WordVisibility,
+
+    /// Should the word's context be managed by the interpreter or the word itself?
+    pub context: WordContext,
 
 
     /// A simple description of the word.
@@ -91,6 +107,7 @@ impl WordInfo
                 runtime: WordRuntime::Normal,
                 word_type: WordType::Native,
                 visibility: WordVisibility::Visible,
+                context: WordContext::Managed,
                 description: String::new(),
                 signature: String::new(),
                 handler_index: 0
