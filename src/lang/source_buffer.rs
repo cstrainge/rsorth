@@ -17,7 +17,7 @@ use std::{ fmt::{ self,
 pub struct SourceLocation
 {
     /// Either the path to the file or a description of the source code.  For example code entered
-    /// in the REPL will have a tag of "<repl>".
+    /// in the REPL will have a tag of "\<repl\>".
     path: String,
 
     /// The 1 based line number in the source code where the token was found.
@@ -168,7 +168,7 @@ impl<'a> SourceBuffer<'a>
         }
     }
 
-    /// Get and cosume the next character in the source code.
+    /// Get and consume the next character in the source code.
     pub fn next(&mut self) -> Option<char>
     {
         let next: Option<char>;
