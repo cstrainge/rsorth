@@ -9,23 +9,34 @@ use crate::{ add_native_immediate_word,
 
 
 
+/// Reset the interpreter to it's default state.  Usually expected to be used inside of the REPL.
+///
+/// Signature: ` -- `
 fn word_reset(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.reset()
 }
 
+/// Include and execute another file at runtime.
+///
+/// Signature: `source -- `
 fn word_include(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let file = interpreter.pop_as_string()?;
     interpreter.process_source_file(&file)
 }
 
+/// Include and execute another file at compile time.  The file to include is expected to be the
+/// next token in the input stream.
+///
+/// Signature: ` -- `
 fn word_include_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let file = interpreter.next_token_text()?;
     interpreter.process_source_file(&file)
 }
 
+/// Evaluate an if at compile time.  Only the code on the successful branch is compiled.
 fn word_if_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     fn is_one_of(found: &str, words: &[&str]) -> bool
@@ -116,6 +127,9 @@ fn word_if_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Print out the current data stack without changing it.
+///
+/// Signature: ` -- `
 fn word_print_stack(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     println!("Depth: {}", interpreter.stack().len());
@@ -135,17 +149,26 @@ fn word_print_stack(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Print out the current word dictionary.
+///
+/// Signature: ` -- `
 fn word_print_dictionary(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     print!("{}", interpreter.dictionary());
     Ok(())
 }
 
+/// Print out the list of interpreter threads.
+///
+/// Signature: ` -- `
 fn word_thread_show(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_show"))
 }
 
+/// Print out the list of currently available data structures.
+///
+/// Signature: ` -- `
 fn word_print_structures(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     for structure in interpreter.structure_definitions()
@@ -156,18 +179,27 @@ fn word_print_structures(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Get the current version of the interpreter.
+///
+/// Signature: ` -- version-string`
 fn word_sorth_version(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push((env!("CARGO_PKG_VERSION").to_string() + ".rust").to_value());
     Ok(())
 }
 
+/// Get the search paths being used by the interpreter.
+///
+/// Signature: ` -- search-paths`
 fn word_sorth_search_path(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push(Value::from(interpreter.search_paths()));
     Ok(())
 }
 
+/// Find a file within the given search paths.
+///
+/// Signature: `file -- full-file-path`
 fn word_sorth_find_file(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let file = interpreter.pop_as_string()?;
@@ -177,6 +209,9 @@ fn word_sorth_find_file(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Get the size of the process's working set.
+///
+/// Signature: ` -- working-set-size`
 fn word_sorth_memory(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut system = System::new();
@@ -204,32 +239,51 @@ fn word_sorth_memory(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Throw an exception with the given message.
+///
+/// Signature: `message -- `
 fn word_throw(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let message = interpreter.pop_as_string()?;
     script_error(interpreter, message)
 }
 
+/// Create a new thread and run the the specified word and return the new thread id.
+///
+/// Signature: `word-index -- thread-id`
 fn word_thread_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_new"))
 }
 
+/// Push a value to another thread's input queue.
+///
+/// Signature: `value thread-id -- `
 fn word_thread_push_to(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_push_to"))
 }
 
+/// Pop a value from another thread's output queue.
+///
+/// Signature: `thread-id -- value`
 fn word_thread_pop_from(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_pop_from"))
 }
 
+/// Push a value onto the current thread's output queue.
+///
+/// Signature: `value -- `
 fn word_thread_push(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_push"))
 }
 
+/// Pop a value from the current's thread's input queue.  This will block if there are no values
+/// available.
+///
+/// Signature: ` -- value`
 fn word_thread_pop(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     script_error(interpreter, format!("Word {} not implemented yet.", "word_thread_pop"))
@@ -237,6 +291,7 @@ fn word_thread_pop(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the interpreter words.
 pub fn register_sorth_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "reset", word_reset,

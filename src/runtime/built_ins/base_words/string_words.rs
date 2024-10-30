@@ -1,12 +1,15 @@
 
-use std::sync::atomic::{ AtomicUsize, Ordering };
+use std::sync::atomic::{ AtomicUsize,
+                         Ordering };
 use crate::{ add_native_word,
              runtime::{ data_structures::value::ToValue,
-                        error::{ self,  script_error },
+                        error::{ self,
+                                 script_error },
                         interpreter::Interpreter } };
 
 
 
+/// Convert a byte index to a logical character index.
 fn byte_to_char_index(interpreter: &mut dyn Interpreter,
                       string: &str,
                       byte_index: usize) -> error::Result<usize>
@@ -21,6 +24,7 @@ fn byte_to_char_index(interpreter: &mut dyn Interpreter,
     Ok(character_index)
 }
 
+/// Convert a logical character index to a byte index.
 fn char_index_to_byte_index(interpreter: &mut dyn Interpreter,
                             string: &str,
                             char_index: usize) -> error::Result<usize>
@@ -44,6 +48,9 @@ fn char_index_to_byte_index(interpreter: &mut dyn Interpreter,
 
 
 
+/// Get the length of a string in logical characters.
+///
+/// Signature: `string -- size`
 fn word_string_length(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let string = interpreter.pop_as_string()?;
@@ -53,6 +60,9 @@ fn word_string_length(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Insert a string into another string at a given index.
+///
+/// Signature: `sub-string index string -- updated-string`
 fn word_string_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut string = interpreter.pop_as_string()?;
@@ -71,6 +81,9 @@ fn word_string_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Remove a count of characters from a string starting at a given index.
+///
+/// Signature: `count position string -- updated-string`
 fn word_string_remove(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut string = interpreter.pop_as_string()?;
@@ -104,6 +117,9 @@ fn word_string_remove(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Find a sub-string within a string and return the index of the first character.
+///
+/// Signature: `sub-string string -- index`
 fn word_string_find(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let string = interpreter.pop_as_string()?;
@@ -125,6 +141,9 @@ fn word_string_find(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read a character from a string at a given index.
+///
+/// Signature: `index string -- character`
 fn word_string_index_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let string = interpreter.pop_as_string()?;
@@ -147,6 +166,9 @@ fn word_string_index_read(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Attempt to convert a string to a number.
+///
+/// Signature: `string -- number`
 fn word_string_to_number(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let string = interpreter.pop_as_string()?;
@@ -181,6 +203,9 @@ fn word_string_to_number(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Convert a value to a string.
+///
+/// Signature: `value -- string`
 fn word_to_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let string = interpreter.pop()?.to_string();
@@ -189,6 +214,9 @@ fn word_to_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Convert a number to a hex string.
+///
+/// Signature: `number -- hex-string`
 fn word_hex(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -224,6 +252,9 @@ fn word_hex(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Generate a unique string and push it onto the data stack.
+///
+/// Signature: ` -- string`
 fn word_unique_str(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     static INDEX: AtomicUsize = AtomicUsize::new(0);
@@ -237,6 +268,7 @@ fn word_unique_str(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the string manipulation words.
 pub fn register_string_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "string.size@", word_string_length,

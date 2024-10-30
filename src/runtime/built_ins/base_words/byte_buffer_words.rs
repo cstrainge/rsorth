@@ -1,12 +1,16 @@
 
 use crate::{ add_native_word,
-             runtime::{ data_structures::{ byte_buffer::{ Buffer, ByteBuffer, ByteBufferPtr },
+             runtime::{ data_structures::{ byte_buffer::{ Buffer,
+                                                          ByteBuffer,
+                                                          ByteBufferPtr },
                                            value::ToValue },
-                        error::{ self, script_error },
+                        error::{ self,
+                                 script_error },
                         interpreter::Interpreter } };
 
 
 
+/// Make sure the next read or write will not violate the bounds of the buffer.
 fn check_buffer_index(interpreter: &mut dyn Interpreter,
                       buffer_ptr: &ByteBufferPtr,
                       byte_size: usize) -> error::Result<()>
@@ -24,6 +28,10 @@ fn check_buffer_index(interpreter: &mut dyn Interpreter,
 }
 
 
+
+/// Create a new ByteBuffer of the given size.
+///
+/// Signature: `size -- buffer`
 fn word_buffer_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let size = interpreter.pop_as_usize()?;
@@ -34,6 +42,9 @@ fn word_buffer_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Get the size of a ByteBuffer.
+///
+/// Signature: `buffer -- size`
 fn word_buffer_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let buffer = interpreter.pop_as_byte_buffer()?;
@@ -43,6 +54,10 @@ fn word_buffer_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Resize a given ByteBuffer, either growing or shrinking it.  If the buffer is grown it is padded
+/// with 0s.
+///
+/// Signature: `size buffer -- `
 fn word_buffer_resize(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let size = interpreter.pop_as_usize()?;
@@ -53,6 +68,9 @@ fn word_buffer_resize(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Write an integer of a given size to the buffer.  The only valid sizes are 1, 2, 4, and 8 bytes.
+///
+/// Signature: `value buffer byte-size -- `
 fn word_buffer_write_int(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let byte_size = interpreter.pop_as_usize()?;
@@ -74,6 +92,10 @@ fn word_buffer_write_int(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read an integer of a given size from the buffer.  The only valid sizes are 1, 2, 4, and 8 bytes.
+/// If the value is signed and negative the value will be sign extended.
+///
+/// Signature: `buffer byte-size is-signed -- value`
 fn word_buffer_read_int(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let is_signed = interpreter.pop_as_bool()?;
@@ -96,6 +118,10 @@ fn word_buffer_read_int(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Write a floating point value of a given size to the buffer.  The only valid sizes are 4 and 8
+/// bytes.
+///
+/// Signature: `value buffer byte-size -- `
 fn word_buffer_write_float(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let byte_size = interpreter.pop_as_usize()?;
@@ -114,6 +140,10 @@ fn word_buffer_write_float(interpreter: &mut dyn Interpreter) -> error::Result<(
     Ok(())
 }
 
+/// Read a floating point value of a given size from the buffer.  The only valid sizes are 4 and 8
+/// bytes.
+///
+/// Signature: `buffer byte-size -- value`
 fn word_buffer_read_float(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let byte_size = interpreter.pop_as_usize()?;
@@ -134,6 +164,10 @@ fn word_buffer_read_float(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Write a string of a given size to the buffer.  If the string is too short it will be padded with
+/// 0s in the buffer.  If it is larger than the size it will be truncated.
+///
+/// Signature: `value buffer byte-size -- `
 fn word_buffer_write_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let byte_size = interpreter.pop_as_usize()?;
@@ -147,6 +181,10 @@ fn word_buffer_write_string(interpreter: &mut dyn Interpreter) -> error::Result<
     Ok(())
 }
 
+/// Read a string of a given size from the buffer.  If the actual string data is shorter than the
+/// size it will be truncated.  It will be treated as a null-terminated string.
+///
+/// Signature: `buffer byte-size -- value`
 fn word_buffer_read_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let byte_size = interpreter.pop_as_usize()?;
@@ -160,6 +198,10 @@ fn word_buffer_read_string(interpreter: &mut dyn Interpreter) -> error::Result<(
     Ok(())
 }
 
+/// Set the position of the cursor in the buffer.  This is the position that the next read or write
+/// will occur at.
+///
+/// Signature: `position buffer -- `
 fn word_buffer_set_position(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let buffer = interpreter.pop_as_byte_buffer()?;
@@ -177,6 +219,9 @@ fn word_buffer_set_position(interpreter: &mut dyn Interpreter) -> error::Result<
     Ok(())
 }
 
+/// Get the current position of the read/write cursor in the buffer.
+///
+/// Signature: `buffer -- position`
 fn word_buffer_get_position(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let buffer = interpreter.pop_as_byte_buffer()?;
@@ -189,6 +234,7 @@ fn word_buffer_get_position(interpreter: &mut dyn Interpreter) -> error::Result<
 
 
 
+/// Register all of the byte buffer words with the given interpreter.
 pub fn register_byte_buffer_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "buffer.new", word_buffer_new,

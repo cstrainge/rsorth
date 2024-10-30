@@ -13,6 +13,7 @@ use crate::{ add_native_word,
 
 
 
+/// Validate that the index is within the bounds of the structure.
 fn check_index(interpreter: &mut dyn Interpreter,
                data_ptr: &DataObjectPtr,
                index: &usize) -> error::Result<()>
@@ -29,6 +30,11 @@ fn check_index(interpreter: &mut dyn Interpreter,
 
 
 
+/// Create a new structure definition and add it's helper words to the interpreter.  This word is
+/// not intended to be called directly user code.  Instead a Forth word is defined that handles
+/// the structure creation syntax and will call this word.
+///
+/// Signature: `[defaults] name field-names is-hidden found-initializers? -- `
 fn word_data_definition(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let location = interpreter.current_location().clone();
@@ -74,6 +80,9 @@ fn word_data_definition(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read a field from a structure.
+///
+/// Signature: `structure index -- value`
 fn word_read_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let index = interpreter.pop_as_usize()?;
@@ -86,6 +95,9 @@ fn word_read_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Write a field to a structure.
+///
+/// Signature: `value structure index -- `
 fn word_write_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let index = interpreter.pop_as_usize()?;
@@ -99,6 +111,11 @@ fn word_write_field(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Iterate through the fields of a structure and call a word for each field.
+///
+/// Signature: `word-index structure -- `
+///
+/// The callback signature: `field-name field-value -- `
 fn word_structure_iterate(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let data_ptr = interpreter.pop_as_data_object()?;
@@ -115,6 +132,9 @@ fn word_structure_iterate(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Check if a field exists in a structure.
+///
+/// Signature: `field-name structure -- boolean`
 fn word_structure_field_exists(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let data_ptr = interpreter.pop_as_data_object()?;
@@ -132,6 +152,9 @@ fn word_structure_field_exists(interpreter: &mut dyn Interpreter) -> error::Resu
     Ok(())
 }
 
+/// Compare two structures to see if they are logically the same.
+///
+/// Signature: `a b -- boolean`
 fn word_structure_compare(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop_as_data_object()?;
@@ -144,6 +167,7 @@ fn word_structure_compare(interpreter: &mut dyn Interpreter) -> error::Result<()
 
 
 
+/// Register the structs `sorth.word` and `sorth.location` with the interpreter.
 fn register_word_info_struct(interpreter: &mut dyn Interpreter)
 {
     let location = DataObjectDefinition::new(interpreter,
@@ -191,6 +215,7 @@ fn register_word_info_struct(interpreter: &mut dyn Interpreter)
 
 
 
+/// Register all of the structure words with teh interpreter.
 pub fn register_data_structure_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "#", word_data_definition,

@@ -32,11 +32,17 @@ use crate::runtime::{ data_structures::value::ToValue,
 
 
 
+/// Record the original terminal settings when switching to raw mode.
 static mut ORIGINAL_TERMIOS: Option<termios> = None;
+
+/// Is the terminal currently in raw mode?
 static mut IS_IN_RAW_MODE: bool = false;
 
 
 
+/// Switch the terminal into/out of raw mode.
+///
+/// Signature: `boolean -- `
 pub fn word_term_raw_mode(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let requested_on = interpreter.pop_as_bool()?;
@@ -95,6 +101,9 @@ pub fn word_term_raw_mode(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Get the size of the terminal in rows and columns.
+///
+/// Signature: ` -- columns rows`
 pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut size: winsize = unsafe { zeroed() };
@@ -111,6 +120,9 @@ pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read a single character from the terminal.  Will block until one is available.
+///
+/// Signature: ` -- character`
 pub fn word_term_key(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut buffer = [0; 1];

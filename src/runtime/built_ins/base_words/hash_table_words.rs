@@ -4,11 +4,15 @@ use crate::{ add_native_word,
              runtime::{ data_structures::{ value::ToValue,
                                            value_hash::ValueHash },
                                            error::{ self,
-                                                    script_error },
+                                                    script_error,
+                                                    script_error_str },
                         interpreter::Interpreter } };
 
 
 
+/// Create a new empty hash table.
+///
+/// Signature: ` -- hash-table`
 fn word_hash_table_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = ValueHash::new();
@@ -17,17 +21,26 @@ fn word_hash_table_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Insert a value into a hash table.
 fn word_hash_table_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = interpreter.pop_as_hash_map()?;
     let key = interpreter.pop()?;
     let value = interpreter.pop()?;
 
+    if key.is_float()
+    {
+        script_error_str(interpreter, "Hash table keys can not be floating point numbers.")?;
+    }
+
     hash_table.borrow_mut().insert(key, value);
 
     Ok(())
 }
 
+/// Extract a value from a hash table, error out if it isn't found.
+///
+/// Signature: `key table -- value`
 fn word_hash_table_find(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = interpreter.pop_as_hash_map()?;
@@ -45,6 +58,9 @@ fn word_hash_table_find(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Check if a key exists in a hash table.
+///
+/// Signature: `key table -- boolean`
 fn word_hash_table_exists(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = interpreter.pop_as_hash_map()?;
@@ -62,6 +78,9 @@ fn word_hash_table_exists(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Merge a hash table into another.
+///
+/// Signature: `dest source -- dest`
 fn word_hash_plus(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let source = interpreter.pop_as_hash_map()?;
@@ -74,6 +93,9 @@ fn word_hash_plus(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Compare two hash tables and see if they are equal.
+///
+/// Signature: `a b -- boolean`
 fn word_hash_compare(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop_as_hash_map()?;
@@ -84,6 +106,9 @@ fn word_hash_compare(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Get the size of a hash table.
+///
+/// Signature: `table -- size`
 fn word_hash_table_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = interpreter.pop_as_hash_map()?;
@@ -93,6 +118,11 @@ fn word_hash_table_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Iterate through a hash table and call a user word for each item.
+///
+/// Signature: `word-index hash -- `
+///
+/// Callback signature: `key value -- `
 fn word_hash_table_iterate(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let hash_table = interpreter.pop_as_hash_map()?;
@@ -111,6 +141,7 @@ fn word_hash_table_iterate(interpreter: &mut dyn Interpreter) -> error::Result<(
 
 
 
+/// Register the hash table words with the interpreter.
 pub fn register_hash_table_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "{}.new", word_hash_table_new,

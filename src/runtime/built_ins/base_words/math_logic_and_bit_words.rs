@@ -1,10 +1,15 @@
 
 use crate::{ add_native_word,
-             runtime::{ data_structures::value::{ ToValue, Value },
-             error::{self, script_error_str},
+             runtime::{ data_structures::value::{ ToValue,
+                                                  Value },
+             error::{ self,
+                      script_error_str },
              interpreter::Interpreter } };
 
 
+
+/// Helper function to handle string or numeric operations.  Handlers for each type of operation are
+/// passed in as arguments.  The stack operations and value conversions are handled here.
 fn string_or_numeric_op(interpreter: &mut dyn Interpreter,
                         fop: fn (&mut dyn Interpreter, f64, f64),
                         iop: fn (&mut dyn Interpreter, i64, i64),
@@ -42,6 +47,8 @@ fn string_or_numeric_op(interpreter: &mut dyn Interpreter,
     Ok(())
 }
 
+/// Helper function to handle math operations.  Handlers for int or floating point operations are
+/// passed in as arguments.  The stack operations and value conversions are handled here.
 fn math_op(interpreter: &mut dyn Interpreter,
            fop: fn (f64, f64) -> f64,
            iop: fn (i64, i64) -> i64)-> error::Result<()>
@@ -74,6 +81,8 @@ fn math_op(interpreter: &mut dyn Interpreter,
     Ok(())
 }
 
+/// Helper function to handle logic operations.  The logic operation is passed in as an argument.
+/// Tha stack operations and value conversions are handled here.
 fn logic_op(interpreter: &mut dyn Interpreter,
             bop: fn (bool, bool) -> bool) -> error::Result<()>
 {
@@ -84,6 +93,8 @@ fn logic_op(interpreter: &mut dyn Interpreter,
     Ok(())
 }
 
+/// Helper function to handle bit logic operations.  The actual bit operation is passed in as an
+/// argument.  The stack operations and value conversions are handled here.
 fn logic_bit_op(interpreter: &mut dyn Interpreter,
                 bop: fn (i64, i64) -> i64) -> error::Result<()>
 {
@@ -105,6 +116,9 @@ fn logic_bit_op(interpreter: &mut dyn Interpreter,
 
 
 
+/// Add 2 numbers or strings together.
+///
+/// Signature: `a b -- result`
 fn word_add(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     string_or_numeric_op(interpreter,
@@ -113,6 +127,9 @@ fn word_add(interpreter: &mut dyn Interpreter) -> error::Result<()>
                          |i, a, b| { i.push((a + &b).to_value()); })
 }
 
+/// Subtract 2 numbers.
+///
+/// Signature: `a b -- result`
 fn word_subtract(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     math_op(interpreter,
@@ -120,6 +137,9 @@ fn word_subtract(interpreter: &mut dyn Interpreter) -> error::Result<()>
             |a, b| { a - b })
 }
 
+/// Multiply 2 numbers.
+///
+/// Signature: `a b -- result`
 fn word_multiply(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     math_op(interpreter,
@@ -127,6 +147,9 @@ fn word_multiply(interpreter: &mut dyn Interpreter) -> error::Result<()>
             |a, b| { a * b })
 }
 
+/// Divide 2 numbers.
+///
+/// Signature: `a b -- result`
 fn word_divide(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     math_op(interpreter,
@@ -134,6 +157,9 @@ fn word_divide(interpreter: &mut dyn Interpreter) -> error::Result<()>
             |a, b| { a / b })
 }
 
+/// Mod 2 numbers.
+///
+/// Signature: `a b -- result`
 fn word_mod(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     math_op(interpreter,
@@ -141,16 +167,25 @@ fn word_mod(interpreter: &mut dyn Interpreter) -> error::Result<()>
             |a, b| { a % b })
 }
 
+/// Logically and 2 boolean values.
+///
+/// Signature: `a b -- result`
 fn word_logic_and(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_op(interpreter, |a, b| { a && b })
 }
 
+/// Logically or 2 boolean values.
+///
+/// Signature: `a b -- result`
 fn word_logic_or(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_op(interpreter, |a, b| { a || b })
 }
 
+/// Logically invert a boolean value.
+///
+/// Signature: `a -- a'`
 fn word_logic_not(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let a = interpreter.pop_as_bool()?;
@@ -159,21 +194,33 @@ fn word_logic_not(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Bitwise AND two numbers together.
+///
+/// Signature: `a b -- result`
 fn word_bit_and(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_bit_op(interpreter, |a, b| { a & b })
 }
 
+/// Bitwise OR two numbers together.
+///
+/// Signature: `a b -- result`
 fn word_bit_or(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_bit_op(interpreter, |a, b| { a | b })
 }
 
+/// Bitwise XOR two numbers together.
+///
+/// Signature: `a b -- result`
 fn word_bit_xor(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_bit_op(interpreter, |a, b| { a ^ b })
 }
 
+/// Bitwise NOT a number.
+///
+/// Signature: `a -- !a`
 fn word_bit_not(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let a = interpreter.pop_as_int()?;
@@ -182,16 +229,25 @@ fn word_bit_not(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Shift a number of bits to the left.
+///
+/// Signature: `a count -- result`
 fn word_bit_left_shift(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_bit_op(interpreter, |value, amount| { value << amount })
 }
 
+/// Shift a number of bits to the right.
+///
+/// Signature: `a count -- result`
 fn word_bit_right_shift(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     logic_bit_op(interpreter, |value, amount| { value >> amount })
 }
 
+/// Are 2 values equal?
+///
+/// Signature: `a b -- boolean`
 fn word_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
@@ -202,6 +258,9 @@ fn word_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is one value greater or equal to another?
+///
+/// Signature: `a b -- boolean`
 fn word_greater_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
@@ -212,6 +271,9 @@ fn word_greater_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is one value lesser or equal to another?
+///
+/// Signature: `a b -- boolean`
 fn word_less_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
@@ -222,6 +284,9 @@ fn word_less_equal(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is one value greater than another?
+///
+/// Signature: `a b -- boolean`
 fn word_greater(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
@@ -232,6 +297,9 @@ fn word_greater(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is one value less than another?
+///
+/// Signature: `a b -- boolean`
 fn word_less(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop()?;
@@ -244,6 +312,7 @@ fn word_less(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Regester all of the math, logic, bit, and equality words.
 pub fn register_math_logic_and_bit_words(interpreter: &mut dyn Interpreter)
 {
     // Math ops.

@@ -7,6 +7,7 @@ use crate::{ add_native_word,
 
 
 
+/// Read a value from the environment variables.
 fn word_user_env_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let name = interpreter.pop_as_string()?;
@@ -22,6 +23,9 @@ fn word_user_env_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 }
 
 #[cfg(target_os = "windows")]
+/// Get the name of the OS the script is running under.
+///
+/// Signature: ` -- os-name`
 fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push("Windows".to_string().to_value());
@@ -29,6 +33,9 @@ fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 }
 
 #[cfg(target_os = "linux")]
+/// Get the name of the OS the script is running under.
+///
+/// Signature: ` -- os-name`
 fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push("Linux".to_string().to_value());
@@ -36,6 +43,9 @@ fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 }
 
 #[cfg(target_os = "macos")]
+/// Get the name of the OS the script is running under.
+///
+/// Signature: ` -- os-name`
 fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push("macOS".to_string().to_value());
@@ -44,6 +54,7 @@ fn word_user_os_read(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the user words with the given interpreter.
 pub fn register_user_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "user.env@", word_user_env_read,

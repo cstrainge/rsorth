@@ -27,17 +27,24 @@ use crate::runtime::{ data_structures::value::ToValue,
 
 
 
+/// Keep track of the original console input mode.
 static mut INPUT_MODE: DWORD = 0;
+
+/// Keep track of the original console output mode.
 static mut OUTPUT_MODE: DWORD = 0;
+
+/// Is the terminal currently in raw mode?
 static mut IS_IN_RAW_MODE: bool = false;
 
-const CP_UTF8: UINT = 65001;
 
+
+const CP_UTF8: UINT = 65001;
 const VK_ESCAPE: u16 = 0x1B;
 const KEY_EVENT: u16 = 1;
 
 
 
+/// Flush any pending input events from the console.
 fn flush_events(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     unsafe
@@ -87,6 +94,9 @@ fn flush_events(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+
+
+/// Windows-specific initialization for the console.
 pub fn init_win_console()
 {
     unsafe
@@ -96,6 +106,9 @@ pub fn init_win_console()
     }
 }
 
+
+
+/// Put the terminal into/out of raw mode.
 pub fn word_term_raw_mode(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let requested_on = interpreter.pop_as_bool()?;
@@ -170,6 +183,9 @@ pub fn word_term_raw_mode(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Get the size of the terminal in rows and columns.
+///
+/// Signature: ` -- columns rows`
 pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     unsafe
@@ -197,6 +213,9 @@ pub fn word_term_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read a single character from the terminal  Will block until one is available.
+///
+/// Signature: ` -- character`
 pub fn word_term_key(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     unsafe

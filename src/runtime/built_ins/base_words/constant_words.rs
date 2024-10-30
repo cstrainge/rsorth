@@ -1,10 +1,12 @@
 
 use crate::{ add_native_word,
-             runtime::{ data_structures::value::{ ToValue, Value },
+             runtime::{ data_structures::value::{ ToValue,
+                                                  Value },
              interpreter::Interpreter } };
 
 
 
+/// Register some useful constant words.
 pub fn register_constant_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "none",

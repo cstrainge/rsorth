@@ -54,24 +54,45 @@ pub type WordList = ContextualList<WordHandlerInfo>;
 
 
 
+/// The core interpreter implementation for the Strange Forth language.
 pub struct SorthInterpreter
 {
+    /// The maximum depth of the data stack during execution.
     max_depth: usize,
 
+    /// The search paths used to find sorth files.
     search_paths: SearchPaths,
 
+    /// The data stack used by the interpreter.
     stack: ValueStack,
 
+
+    /// The last known location execution has reached in the original source code.
     current_location: Option<SourceLocation>,
+
+    /// The call stack used to keep track of the current execution context.
     call_stack: CallStack,
 
+
+    /// The list of the data structure definitions known by the interpreter.
     data_definitions: DataDefinitionList,
 
+
+    /// The dictionary of words known by the interpreter.
     dictionary: Dictionary,
+
+    /// The list of executable word handlers associated with the dictionary.
     word_handlers: WordList,
 
+    /// The list of variables known by the interpreter.
     variables: VariableList,
 
+
+    /// The stack of code construction contexts used to build up the code blocks for both words and
+    /// script top level code.
+    ///
+    /// We keep track of it here because during compilation immediate words need to be able to
+    /// access and manipulate the context stack and it's code blocks.
     constructors: CodeConstructorList
 }
 
@@ -80,6 +101,7 @@ impl Interpreter for SorthInterpreter
 {
     fn add_search_path(&mut self, path: &String) -> error::Result<()>
     {
+        // Make sure the path exists.
         if let Err(err) = metadata(path)
         {
             script_error(self, format!("Could not append search path {}: {}.", path, err))?;
@@ -104,7 +126,7 @@ impl Interpreter for SorthInterpreter
                 }
                 else
                 {
-                    script_error_str(self, "Path contains error characters.")
+                    script_error_str(self, "Path contains invalid characters.")
                 }
             }
             else
@@ -136,8 +158,11 @@ impl Interpreter for SorthInterpreter
 
     fn find_file(&self, path: &String) -> error::Result<String>
     {
+        // If the path is relative the the process's current directory or it's an absolute path we
+        // can just try to see if it exists.
         if Path::new(path).exists()
         {
+            // Make sure the path is canonicalized.
             let canonical = canonicalize(path)?;
 
             if let Some(canonical) = canonical.to_str()
@@ -151,12 +176,15 @@ impl Interpreter for SorthInterpreter
         }
         else
         {
+            // Otherwise we need to search the search paths for the file.
             for directory in self.search_paths.iter().rev()
             {
+                // Try to find the file in the current search path.
                 let full_path = PathBuf::from(directory).join(path);
 
                 if full_path.exists()
                 {
+                    // Again make sure the path is canonicalized.
                     let canonical = canonicalize(full_path)?;
 
                     if let Some(canonical) = canonical.to_str()
@@ -191,9 +219,13 @@ impl Interpreter for SorthInterpreter
 
     fn reset(&mut self) -> error::Result<()>
     {
+        // Clear the current context and the stack.  This should be enough to reset the interpreter
+        // to a managed default state.
         self.release_context();
         self.stack.clear();
 
+        // Make sure to make the new context in case we need to reset tot he prior state again.
+        self.mark_context();
         Ok(())
     }
 }
@@ -489,7 +521,7 @@ impl SorthInterpreter
     fn execute_value(&mut self, value: &Value) -> error::Result<()>
     {
         let location =
-            if let Some(location) = self.current_location.clone()
+            if let Some(location) = &self.current_location
             {
                 location.clone()
             }
@@ -556,9 +588,8 @@ impl SorthInterpreter
             }
             else
             {
-                script_error(self, format!("Invalid loop exit index {}.",
-                                           relative_index))?;
-                0
+                return script_error(self, format!("Invalid loop exit index {}.",
+                                           relative_index));
             };
 
         // All's good.
@@ -625,7 +656,7 @@ impl CodeManagement for SorthInterpreter
         let word = token.word(self)?.clone();
         let location = token.location().clone();
 
-        Ok((location, word ))
+        Ok(( location, word ))
     }
 
     fn context_new(&mut self, tokens: TokenList)
@@ -724,9 +755,11 @@ impl CodeManagement for SorthInterpreter
             // Fetch the current instruction.
             let instruction = &code[pc];
 
-            // Does the current instruction have a location associated with it?
+            // Does the current instruction have a location associated with it?  If so we need to
+            // keep track of it.
             if let Some(location) = &instruction.location
             {
+
                 self.current_location = Some(location.clone());
                 self.call_stack_push(name.clone(), location.clone());
                 call_stack_pushed = true;
@@ -765,14 +798,14 @@ impl CodeManagement for SorthInterpreter
 
                     Op::UnmarkLoopExit =>
                         {
-                            if loop_locations.is_empty()
-                            {
-                                script_error_str(self, "Unbalanced loop exit marker.")
-                            }
-                            else
+                            if !loop_locations.is_empty()
                             {
                                 let _ = loop_locations.pop();
                                 Ok(())
+                            }
+                            else
+                            {
+                                script_error_str(self, "Unbalanced loop exit marker.")
                             }
                         },
 
@@ -793,14 +826,14 @@ impl CodeManagement for SorthInterpreter
 
                     Op::UnmarkCatch =>
                         {
-                            if catch_locations.is_empty()
-                            {
-                                script_error_str(self, "Unbalanced catch exit marker.")
-                            }
-                            else
+                            if !catch_locations.is_empty()
                             {
                                 let _ = catch_locations.pop();
                                 Ok(())
+                            }
+                            else
+                            {
+                                script_error_str(self, "Unbalanced catch exit marker.")
                             }
                         },
 
@@ -814,14 +847,14 @@ impl CodeManagement for SorthInterpreter
 
                     Op::ReleaseContext =>
                         {
-                            if contexts == 0
-                            {
-                                script_error_str(self, "Unbalanced context release detected.")
-                            }
-                            else
+                            if contexts != 0
                             {
                                 contexts -= 1;
                                 Ok(())
+                            }
+                            else
+                            {
+                                script_error_str(self, "Unbalanced context release detected.")
                             }
                         },
 
@@ -846,11 +879,7 @@ impl CodeManagement for SorthInterpreter
 
                     Op::JumpLoopStart =>
                         {
-                            if loop_locations.is_empty()
-                            {
-                                script_error_str(self, "JumpLoopStart outside of loop.")
-                            }
-                            else
+                            if !loop_locations.is_empty()
                             {
                                 // Jump to the start of the marked loop.
                                 let ( start, _ ) = loop_locations[loop_locations.len() - 1];
@@ -859,6 +888,10 @@ impl CodeManagement for SorthInterpreter
                                 //  loop.
                                 pc = start - 1;
                                 Ok(())
+                            }
+                            else
+                            {
+                                script_error_str(self, "JumpLoopStart outside of loop.")
                             }
                         },
 
@@ -886,7 +919,7 @@ impl CodeManagement for SorthInterpreter
                             // the jump instructions.
                             Ok(())
                         }
-            };
+                };
 
             // If the instruction was not successful we need to clean up and report the error.
             if let Err(script_error) = result.clone()
@@ -903,6 +936,8 @@ impl CodeManagement for SorthInterpreter
                         self.call_stack_pop()?;
                     }
 
+                    // Make sure that the contexts are balanced.  In this case we don't want to
+                    // report an error because we are already reporting an error.
                     cleanup_contexts(self, contexts, false)?;
                     return result;
                 }
@@ -1090,10 +1125,10 @@ impl SorthInterpreter
 
                 search_paths: Vec::new(),
 
-                stack: Vec::new(),
+                stack: Vec::with_capacity(20),
 
                 current_location: None,
-                call_stack: CallStack::new(),
+                call_stack: CallStack::with_capacity(40),
 
                 data_definitions: DataDefinitionList::new(),
 

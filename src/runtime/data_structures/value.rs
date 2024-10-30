@@ -85,7 +85,12 @@ impl Default for Value
 }
 
 
-
+/// Implement Eq for the Value enumeration.  This is used so that the Value enumeration can be used
+/// as a key in a hash map.  However, it must be noted that the Value can hold floating point values
+/// which violate the Eq trait rules.  This is a known limitation of the implementation.
+///
+/// It should be noted in the user documentation that floating point Values should not be used as
+/// keys in a hash map.
 impl Eq for Value {}
 
 

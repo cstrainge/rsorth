@@ -1,9 +1,14 @@
 
 use crate::{ add_native_word,
-             runtime::{ data_structures::value::ToValue, error, interpreter::Interpreter } };
+             runtime::{ data_structures::value::ToValue,
+                        error,
+                        interpreter::Interpreter } };
 
 
 
+/// Is the value nothing?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_none(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -13,6 +18,9 @@ fn word_value_is_none(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a number?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_number(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -22,6 +30,9 @@ fn word_value_is_number(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a boolean?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_boolean(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -31,6 +42,9 @@ fn word_value_is_boolean(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a string?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -40,6 +54,9 @@ fn word_value_is_string(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a structure?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_structure(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -49,6 +66,9 @@ fn word_value_is_structure(interpreter: &mut dyn Interpreter) -> error::Result<(
     Ok(())
 }
 
+/// Is the value an array?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_array(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -58,6 +78,9 @@ fn word_value_is_array(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a byte buffer?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_buffer(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -67,6 +90,9 @@ fn word_value_is_buffer(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a hash table?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_hash_table(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -76,6 +102,9 @@ fn word_value_is_hash_table(interpreter: &mut dyn Interpreter) -> error::Result<
     Ok(())
 }
 
+/// Is the value a lexical token?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_token(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -85,6 +114,9 @@ fn word_value_is_token(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the value a block of byte-code?
+///
+/// Signature: `value -- boolean`
 fn word_value_is_code(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -96,6 +128,7 @@ fn word_value_is_code(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the value introspection words.
 pub fn register_value_type_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "value.is-none?", word_value_is_none,

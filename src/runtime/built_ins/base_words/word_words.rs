@@ -18,14 +18,7 @@ use crate::{ add_native_immediate_word,
 
 
 
-fn word_word(interpreter: &mut dyn Interpreter) -> error::Result<()>
-{
-    let token = interpreter.next_token()?;
-
-    interpreter.push(token.to_value());
-    Ok(())
-}
-
+/// Helper function to get the definition for sorth.word from the interpreter.
 fn get_word_info_definition(interpreter: &mut dyn Interpreter) -> DataObjectDefinitionPtr
 {
     for definition in interpreter.structure_definitions()
@@ -39,6 +32,7 @@ fn get_word_info_definition(interpreter: &mut dyn Interpreter) -> DataObjectDefi
     panic!("Word info definition was not found.");
 }
 
+/// Helper function to get the definition for the sorth.location structure from the interpreter.
 fn get_word_location_definition(interpreter: &mut dyn Interpreter) -> DataObjectDefinitionPtr
 {
     for definition in interpreter.structure_definitions()
@@ -105,6 +99,21 @@ fn convert_word_info(word: &WordInfo,
     word_info_ptr
 }
 
+
+
+/// Intended to be called at compile type, this will pull the next word from the token stream and
+/// push it onto the data stack.
+///
+/// Signature: ` -- next-word`
+fn word_word(interpreter: &mut dyn Interpreter) -> error::Result<()>
+{
+    let token = interpreter.next_token()?;
+
+    interpreter.push(token.to_value());
+    Ok(())
+}
+
+/// Get a copy of the word table as it exists at the time of calling.
 fn word_get_word_table(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let word_definition = get_word_info_definition(interpreter);
@@ -126,6 +135,8 @@ fn word_get_word_table(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// This will get the index of the next word in the token stream, and create an instruction to push
+/// that index onto the data stack at runtime.
 fn word_word_index(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let ( location, word ) = interpreter.next_token_word()?;
@@ -143,6 +154,9 @@ fn word_word_index(interpreter: &mut dyn Interpreter) -> error::Result<()>
     }
 }
 
+/// Execute a word name or index.
+///
+/// Signature: `word-name-or-index -- ???`
 fn word_execute(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -167,6 +181,9 @@ fn word_execute(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the given word defined?
+///
+/// Signature: `word-name -- boolean`
 fn word_is_defined(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let word = interpreter.pop_as_string()?;
@@ -176,6 +193,10 @@ fn word_is_defined(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Execute at compile time, is the given word defined?  The word name is pulled from the token
+/// stream.
+///
+/// Signature: ` -- boolean`
 fn word_is_defined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let ( _, word ) = interpreter.next_token_word()?;
@@ -185,6 +206,10 @@ fn word_is_defined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Execute at compile time, is the given word undefined?  The word name is pulled from the token
+/// stream.
+///
+/// Signature: ` -- boolean`
 fn word_is_undefined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let ( _, word ) = interpreter.next_token_word()?;
@@ -196,6 +221,7 @@ fn word_is_undefined_im(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the word words with the given interpreter.
 pub fn register_word_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "word", word_word,

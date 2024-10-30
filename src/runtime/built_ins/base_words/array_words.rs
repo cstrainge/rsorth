@@ -10,6 +10,7 @@ use crate::{ add_native_word,
 
 
 
+/// Check if the index is within the bounds of the array.
 fn check_bounds(interpreter: &mut dyn Interpreter,
                 array: &ValueVecPtr,
                 index: &usize) -> error::Result<()>
@@ -26,6 +27,9 @@ fn check_bounds(interpreter: &mut dyn Interpreter,
 
 
 
+/// Create a new array with the given size and push it onto the stack.
+///
+/// Signature: `size -- array`
 fn word_array_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let size = interpreter.pop_as_usize()?;
@@ -35,6 +39,9 @@ fn word_array_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read the size of an array and push it onto the stack.
+///
+/// Signature: `array -- size`
 fn word_array_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -43,6 +50,9 @@ fn word_array_size(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Write a value to the array at the given index.
+///
+/// Signature: `value index array -- `
 fn word_array_write_index(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -56,6 +66,9 @@ fn word_array_write_index(interpreter: &mut dyn Interpreter) -> error::Result<()
     Ok(())
 }
 
+/// Read a value from the array at the given index and push it onto the stack.
+///
+/// Signature: `index array -- value`
 fn word_array_read_index(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -68,6 +81,10 @@ fn word_array_read_index(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Resize an array to a new size, either growing or shrinking it.  It will be padded with None
+/// values if grown.
+///
+/// Signature: `new-size array -- `
 fn word_array_resize(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -78,6 +95,9 @@ fn word_array_resize(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Insert a value into an array at the given index, growing the array by one item.
+///
+/// Signature: `value index array -- `
 fn word_array_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -91,6 +111,9 @@ fn word_array_insert(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Delete a value from the array at the given index, shrinking the array by one item.
+///
+/// Signature: `index array -- `
 fn word_array_delete(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -103,6 +126,9 @@ fn word_array_delete(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Append on array onto the end of another array.
+///
+/// Signature: `dest source -- dest`
 fn word_array_plus(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let source = interpreter.pop_as_array()?;
@@ -115,6 +141,9 @@ fn word_array_plus(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Compare two arrays to see if they are equal.
+///
+/// Signature: `a b -- are-equal?`
 fn word_array_compare(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let b = interpreter.pop_as_array()?;
@@ -125,6 +154,9 @@ fn word_array_compare(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Push a value onto the front of an array growing it by one item.
+///
+/// Signature: `value array -- `
 fn word_push_front(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -135,6 +167,9 @@ fn word_push_front(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Push a value onto the back of an array growing it by one item.
+///
+/// Signature: `value array -- `
 fn word_push_back(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -145,6 +180,9 @@ fn word_push_back(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Pop a value from the front of an array, shrinking it by one item.
+///
+/// Signature: `array -- value`
 fn word_pop_front(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -161,6 +199,9 @@ fn word_pop_front(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Pop a value from the back of an array, shrinking it by one item.
+///
+/// Signature: `array -- value`
 fn word_pop_back(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let array = interpreter.pop_as_array()?;
@@ -179,6 +220,7 @@ fn word_pop_back(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the array words.
 pub fn register_array_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "[].new", word_array_new,

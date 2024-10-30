@@ -8,6 +8,7 @@ use crate::{ add_native_word,
 
 
 #[cfg(windows)]
+/// Windows specific versions of the terminal words.
 mod windows;
 
 #[cfg(windows)]
@@ -16,6 +17,7 @@ use windows::{ init_win_console, word_term_raw_mode, word_term_size, word_term_k
 
 
 #[cfg(unix)]
+/// Unix specific versions of the terminal words.
 mod unix;
 
 #[cfg(unix)]
@@ -23,6 +25,9 @@ use unix::{ word_term_raw_mode, word_term_size, word_term_key };
 
 
 
+/// Flush the terminal buffers.
+///
+/// Signature: ` -- `
 fn word_term_flush(_interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     stdout().flush()?;
@@ -30,6 +35,9 @@ fn word_term_flush(_interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Read a line of text from the terminal.
+///
+/// Signature: ` -- string`
 fn word_term_readline(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let mut line = String::new();
@@ -40,6 +48,9 @@ fn word_term_readline(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Write a value as text to the console.
+///
+/// Signature: `value -- `
 fn word_term_write(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -48,6 +59,9 @@ fn word_term_write(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Is the given character printable in the terminal?
+///
+/// Signature: `character -- boolean`
 fn word_term_is_printable(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop_as_string()?;
@@ -67,6 +81,7 @@ fn word_term_is_printable(interpreter: &mut dyn Interpreter) -> error::Result<()
 
 
 
+/// Register the terminal words with the interpreter.
 pub fn register_terminal_words(interpreter: &mut dyn Interpreter)
 {
     #[cfg(windows)]

@@ -6,6 +6,9 @@ use crate::{ add_native_word,
 
 
 
+/// Duplicate the top value on the data stack.
+///
+/// Signature: `value -- value value`
 fn word_dup(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let value = interpreter.pop()?;
@@ -16,6 +19,9 @@ fn word_dup(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Drop the top value on the data stack.
+///
+/// Signature: `value -- `
 fn word_drop(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let _ = interpreter.pop()?;
@@ -23,6 +29,9 @@ fn word_drop(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Swap the top 2 values on the data stack.
+///
+/// Signature: `a b -- b a`
 fn word_swap(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let a = interpreter.pop()?;
@@ -34,18 +43,24 @@ fn word_swap(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Make a copy of the second value and place the copy over and under the first item.
+///
+/// Signature: `a b -- b a b`
 fn word_over(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
-    let a = interpreter.pop()?;
     let b = interpreter.pop()?;
+    let a = interpreter.pop()?;
 
-    interpreter.push(a.clone());
-    interpreter.push(b);
+    interpreter.push(b.clone());
     interpreter.push(a);
+    interpreter.push(b);
 
     Ok(())
 }
 
+/// Rotate the top 3 values on the stack.
+///
+/// Signature: `a b c -- c a b`
 fn word_rot(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let c = interpreter.pop()?;
@@ -59,18 +74,27 @@ fn word_rot(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Get the depth of the data stack before calling this word.
+///
+/// Signature: ` -- depth`
 fn word_stack_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push(interpreter.stack().len().to_value());
     Ok(())
 }
 
+/// Get the current maximum depth of the data stack.
+///
+/// Signature: ` -- max-depth`
 fn word_stack_max_depth(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     interpreter.push(interpreter.stack_max_depth().to_value());
     Ok(())
 }
 
+/// Pick the value at the given index and push it on the top of the stack.
+///
+/// Signature: `index -- picked-value`
 fn word_pick(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let index = interpreter.pop_as_int()?;
@@ -89,6 +113,9 @@ fn word_pick(interpreter: &mut dyn Interpreter) -> error::Result<()>
     Ok(())
 }
 
+/// Pop the top value and push it back into the stack a position from the top.
+///
+/// Signature: `value -- <updated-stack>`
 fn word_push_to(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let index = interpreter.pop_as_int()?;
@@ -108,6 +135,7 @@ fn word_push_to(interpreter: &mut dyn Interpreter) -> error::Result<()>
 
 
 
+/// Register the stack manipulation words.
 pub fn register_stack_words(interpreter: &mut dyn Interpreter)
 {
     add_native_word!(interpreter, "dup", word_dup,
