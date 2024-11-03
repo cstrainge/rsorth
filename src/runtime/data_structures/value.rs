@@ -211,7 +211,7 @@ macro_rules! value_conversion
 {
     ($data_type:ty , $variant:ident , $as_ident:ident) =>
     {
-        /// Convert a value to the internal data type.
+        #[doc = concat!("Convert a value to ", stringify!($data_type), ".")]
         impl Value
         {
             pub fn $as_ident(&self, interpreter: &dyn Interpreter) -> error::Result<&$data_type>
@@ -227,7 +227,7 @@ macro_rules! value_conversion
         }
 
 
-        /// Allow conversion from a data type to a Value.
+        #[doc = concat!("Allow conversion from ", stringify!($data_type), " to a Value.")]
         impl ToValue for $data_type
         {
             fn to_value(&self) -> Value
@@ -237,7 +237,7 @@ macro_rules! value_conversion
         }
 
 
-        /// Support converting from a data type to a Value.
+        #[doc = concat!("Support converting from a ", stringify!($data_type), " to a Value.")]
         impl From<$data_type> for Value
         {
             fn from(original: $data_type) -> Value
@@ -247,7 +247,7 @@ macro_rules! value_conversion
         }
 
 
-        // Also support converting from a Value to a data type.
+        #[doc = concat!("Also support converting from a Value to a ", stringify!($data_type), ".")]
         impl From<Value> for $data_type
         {
             fn from(original: Value) -> $data_type
@@ -257,7 +257,7 @@ macro_rules! value_conversion
                     return contained_value;
                 }
 
-                panic!("Could not automatically convert from a Value to a {}", stringify!($type));
+                panic!("Could not automatically convert from a Value to a {}.", stringify!($type));
             }
         }
     };
@@ -351,7 +351,7 @@ macro_rules! is_variant
 {
     ($name:ident , $either_name:ident , $variant:ident) =>
     {
-        /// Check if the value is the variant.
+        #[doc = concat!("Check if the value is the variant ", stringify!($variant), ".")]
         pub fn $name(&self) -> bool
         {
             if let Value::$variant(ref _value) = self
@@ -364,7 +364,9 @@ macro_rules! is_variant
             }
         }
 
-        /// Check if either of the two values are the variant.
+        #[doc = concat!("Check if either of the two values are the variant ",
+                        stringify!($variant),
+                        ".")]
         pub fn $either_name(a: &Value, b: &Value) -> bool
         {
             a.$name() || b.$name()
@@ -421,7 +423,7 @@ impl Value
     }
 
 
-    /// Are both value numeric types?
+    /// Are both values numeric types?
     pub fn both_are_numeric(a: &Value, b: &Value) -> bool
     {
         a.is_numeric() && b.is_numeric()
