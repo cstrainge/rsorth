@@ -69,7 +69,6 @@ impl FnMut<( &mut dyn Interpreter, )> for ScriptFunction
 {
     extern "rust-call" fn call_mut(&mut self, args: ( &mut dyn Interpreter, )) -> error::Result<()>
     {
-
         if let WordContext::Managed = self.context
         {
             args.0.mark_context();
@@ -94,7 +93,6 @@ impl FnOnce<( &mut dyn Interpreter, )> for ScriptFunction
 
     extern "rust-call" fn call_once(self, args: ( &mut dyn Interpreter, )) -> error::Result<()>
     {
-
         if let WordContext::Managed = self.context
         {
             args.0.mark_context();
