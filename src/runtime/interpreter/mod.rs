@@ -11,7 +11,8 @@ use crate::{ lang::{ code::{ ByteCode,
                      tokenizing::{ NumberType,
                                    Token,
                                    TokenList } },
-             runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
+             runtime::{ built_ins::ffi_words::FfiInterface,
+                        data_structures::{ byte_buffer::ByteBufferPtr,
                                            contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
@@ -486,6 +487,13 @@ pub trait ThreadManagement
 }
 
 
+/// Trait for managing the ffi context.
+pub trait Ffi
+{
+    fn ffi(&self) -> &FfiInterface;
+    fn ffi_mut(&mut self) -> &mut FfiInterface;
+}
+
 
 /// Core interpreter trait.
 ///
@@ -499,7 +507,8 @@ pub trait Interpreter : ContextualData +
                         InterpreterStack +
                         CodeManagement +
                         WordManagement +
-                        ThreadManagement
+                        ThreadManagement +
+                        Ffi
 {
     /// Add a new path to the search path list.  This path will be checked to make sure that it
     /// exists.

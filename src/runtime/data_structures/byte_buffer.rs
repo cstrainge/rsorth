@@ -1,9 +1,7 @@
 
-use std::{ cell::RefCell,
-           fmt::{ self,
+use std::{ cell::RefCell, fmt::{ self,
                   Display,
-                  Formatter },
-           rc::Rc };
+                  Formatter }, os::raw::c_void, rc::Rc };
 use crate::runtime::data_structures::value::{ DeepClone,
                                               Value,
                                               ToValue };
@@ -26,6 +24,15 @@ pub trait Buffer
     /// Get a reference to the buffer's raw bytes.
     fn bytes(&self) -> &[u8];
 
+    /// Get a mutable reference to the buffer's raw bytes.
+    fn bytes_mut(&mut self) -> &mut [u8];
+
+
+    /// Get a mutable pointer to the buffer's raw bytes.
+    fn byte_ptr_mut(&mut self) -> *mut c_void
+    {
+        self.bytes_mut().as_mut_ptr() as *mut c_void
+    }
 
     /// Resize the buffer to a new size.  If the new size is larger the buffer will be padded with
     /// zeros.  If the new size is smaller the buffer will be truncated.
@@ -37,7 +44,13 @@ pub trait Buffer
 
     /// Get the current cursor position in the buffer.
     fn position(&self) -> usize;
-    // position_ptr
+
+
+    /// Get a mutable pointer to the current cursor position in the buffer.
+    fn position_ptr_mut(&mut self) -> *mut c_void
+    {
+        self.bytes_mut().as_mut_ptr().wrapping_add(self.position()) as *mut c_void
+    }
 
 
     /// Set the cursor position in the buffer.  If the position is greater than the buffer size the
@@ -128,6 +141,11 @@ impl Buffer for ByteBuffer
         &self.buffer
     }
 
+    fn bytes_mut(&mut self) -> &mut [u8]
+    {
+        &mut self.buffer
+    }
+
     fn resize(&mut self, new_size: usize)
     {
         self.buffer.resize(new_size, 0);
@@ -148,8 +166,6 @@ impl Buffer for ByteBuffer
         self.current_position
     }
 
-    // position_ptr
-
     fn set_position(&mut self, position: usize)
     {
         if position > self.buffer.len()
@@ -166,9 +182,6 @@ impl Buffer for ByteBuffer
     {
         self.set_position(self.current_position + increment);
     }
-
-    // data_ptr
-    // data_ptr_mut
 
     fn write_int(&mut self, byte_size: usize, value: i64)
     {
@@ -333,7 +346,7 @@ impl DeepClone for ByteBufferPtr
 {
     fn deep_clone(&self) -> Value
     {
-        let new_buffer = ByteBuffer::new(self.borrow().len());
+        let new_buffer = ByteBuffer::new_ptr(self.borrow().len());
 
         new_buffer.borrow_mut().buffer
                                .copy_from_slice(&self.borrow().buffer[0..self.borrow().len()]);
@@ -416,19 +429,23 @@ impl Display for ByteBuffer
 
 impl ByteBuffer
 {
-    /// Create a new byte buffer reference of the given size.
-    pub fn new(new_len: usize) -> ByteBufferPtr
+    /// Create a new byte buffer of the given size.
+    pub fn new(new_len: usize) -> ByteBuffer
     {
         let mut buffer = Vec::new();
 
         buffer.resize(new_len, 0);
 
-        let buffer = ByteBuffer
+        ByteBuffer
             {
                 buffer,
                 current_position: 0
-            };
+            }
+    }
 
-        Rc::new(RefCell::new(buffer))
+    /// Create a new byte buffer reference of the given size.
+    pub fn new_ptr(new_len: usize) -> ByteBufferPtr
+    {
+        Rc::new(RefCell::new(ByteBuffer::new(new_len)))
     }
 }

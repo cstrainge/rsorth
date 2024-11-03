@@ -1911,7 +1911,7 @@
 
 
 ( Include the ffi system. )
-( [include] std/ffi.f )
+[include] std/ffi.f
 
 
 

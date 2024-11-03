@@ -35,7 +35,7 @@ fn check_buffer_index(interpreter: &mut dyn Interpreter,
 fn word_buffer_new(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
     let size = interpreter.pop_as_usize()?;
-    let buffer = ByteBuffer::new(size);
+    let buffer = ByteBuffer::new_ptr(size);
 
     interpreter.push(buffer.to_value());
 

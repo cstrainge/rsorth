@@ -1,8 +1,10 @@
 
 use std::{ fs::{ metadata, canonicalize },
-           path::{ Path, PathBuf },
+           path::{ Path,
+                   PathBuf },
            rc::Rc };
-use crate::{ add_native_word, location_here,
+use crate::{ add_native_word,
+             location_here,
              lang::{ code::{ /*pretty_print_code,*/
                              ByteCode,
                              Op },
@@ -15,7 +17,8 @@ use crate::{ add_native_word, location_here,
                                    NumberType,
                                    Token,
                                    TokenList } },
-             runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
+             runtime::{ built_ins::ffi_words::FfiInterface,
+                        data_structures::{ byte_buffer::ByteBufferPtr,
                                            contextual_data::ContextualData,
                                            contextual_list::ContextualList,
                                            data_object::{ DataDefinitionList,
@@ -44,12 +47,15 @@ use crate::{ add_native_word, location_here,
                                        VariableList,
                                        WordHandler,
                                        WordHandlerInfo,
-                                       WordManagement } } };
+                                       WordManagement,
+                                       Ffi } } };
 
 
 
+/// The search paths used to find sorth files.
 pub type SearchPaths = Vec<String>;
 
+/// List of word handlers known by the interpreter.
 pub type WordList = ContextualList<WordHandlerInfo>;
 
 
@@ -86,6 +92,10 @@ pub struct SorthInterpreter
 
     /// The list of variables known by the interpreter.
     variables: VariableList,
+
+
+    /// The FFI interface used by the interpreter.
+    ffi: FfiInterface,
 
 
     /// The stack of code construction contexts used to build up the code blocks for both words and
@@ -223,6 +233,9 @@ impl Interpreter for SorthInterpreter
         // to a managed default state.
         self.release_context();
         self.stack.clear();
+
+        // Make sure to reset the FFI subsystem state as well.
+        self.ffi.reset();
 
         // Make sure to make the new context in case we need to reset tot he prior state again.
         self.mark_context();
@@ -1115,6 +1128,20 @@ impl ThreadManagement for SorthInterpreter
 }
 
 
+impl Ffi for SorthInterpreter
+{
+    fn ffi(&self) -> &FfiInterface
+    {
+        &self.ffi
+    }
+
+    fn ffi_mut(&mut self) -> &mut FfiInterface
+    {
+        &mut self.ffi
+    }
+}
+
+
 impl SorthInterpreter
 {
     pub fn new() -> SorthInterpreter
@@ -1136,6 +1163,8 @@ impl SorthInterpreter
                 word_handlers: WordList::new(),
 
                 variables: VariableList::new(),
+
+                ffi: FfiInterface::new(),
 
                 constructors: CodeConstructorList::new()
             }
