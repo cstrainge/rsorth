@@ -159,6 +159,10 @@ pub trait InterpreterStack
     /// converted an error is returned.  We also fail if the stack is empty.
     fn pop_as_byte_buffer(&mut self) -> error::Result<ByteBufferPtr>;
 
+    /// Pop the top value and attempt to convert it to a token.  If the value can not be converted
+    /// an error is returned.  We also fail if the stack is empty.
+    fn pop_as_token(&mut self) -> error::Result<Token>;
+
     /// Pop the top value and attempt to convert it to a code block.  If the value can not be
     /// converted an error is returned.  We also fail if the stack is empty.
     fn pop_as_code(&mut self) -> error::Result<ByteCode>;

@@ -399,6 +399,18 @@ impl InterpreterStack for SorthInterpreter
         Ok(value.as_byte_buffer(self)?.clone())
     }
 
+    fn pop_as_token(&mut self) -> error::Result<Token>
+    {
+        let value = self.pop()?;
+
+        if !value.is_token()
+        {
+            script_error_str(self, "Expected a token.")?;
+        }
+
+        Ok(value.as_token(self)?.clone())
+    }
+
     fn pop_as_code(&mut self) -> error::Result<ByteCode>
     {
         let value = self.pop()?;
