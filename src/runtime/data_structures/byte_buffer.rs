@@ -1,7 +1,10 @@
 
-use std::{ cell::RefCell, fmt::{ self,
+use std::{ cell::RefCell,
+           fmt::{ self,
                   Display,
-                  Formatter }, os::raw::c_void, rc::Rc };
+                  Formatter },
+           os::raw::c_void,
+           rc::Rc };
 use crate::runtime::data_structures::value::{ DeepClone,
                                               Value,
                                               ToValue };
@@ -21,18 +24,11 @@ use crate::runtime::data_structures::value::{ DeepClone,
 /// This buffer should be most useful for binary data protocols and file formats.
 pub trait Buffer
 {
-    /// Get a reference to the buffer's raw bytes.
-    fn bytes(&self) -> &[u8];
-
-    /// Get a mutable reference to the buffer's raw bytes.
-    fn bytes_mut(&mut self) -> &mut [u8];
-
+    /// Get a pointer to the buffer's raw bytes.
+    fn byte_ptr(&self) -> *const c_void;
 
     /// Get a mutable pointer to the buffer's raw bytes.
-    fn byte_ptr_mut(&mut self) -> *mut c_void
-    {
-        self.bytes_mut().as_mut_ptr() as *mut c_void
-    }
+    fn byte_ptr_mut(&mut self) -> *mut c_void;
 
     /// Resize the buffer to a new size.  If the new size is larger the buffer will be padded with
     /// zeros.  If the new size is smaller the buffer will be truncated.
@@ -47,10 +43,7 @@ pub trait Buffer
 
 
     /// Get a mutable pointer to the current cursor position in the buffer.
-    fn position_ptr_mut(&mut self) -> *mut c_void
-    {
-        self.bytes_mut().as_mut_ptr().wrapping_add(self.position()) as *mut c_void
-    }
+    fn position_ptr_mut(&mut self) -> *mut c_void;
 
 
     /// Set the cursor position in the buffer.  If the position is greater than the buffer size the
@@ -109,6 +102,96 @@ pub trait Buffer
 
 
 
+impl Display for dyn Buffer
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result
+    {
+        // Print out the buffer in a hex dump format:
+        //
+        //           00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  | 01234567 89abcdef |
+        // 00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  | ........ ........ |
+        // 00000010  00 00 00 00 00 00                                 | ......            |
+
+        let bytes =
+            unsafe
+            {
+                let ptr = self.byte_ptr();
+                let ptr_u8 = ptr as *const u8;
+
+                std::slice::from_raw_parts(ptr_u8, self.len())
+            };
+
+        writeln!(f,
+              "          00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  | 01234567 89abcdef |")?;
+
+        for ( chunk_index, chunk ) in bytes.chunks(16).enumerate()
+        {
+            let offset = chunk_index * 16;
+
+            write!(f, "{:08x}  ", offset)?;
+
+            for index in 0..16
+            {
+                if index == 8
+                {
+                    write!(f, " ")?;
+                }
+
+                if index < chunk.len()
+                {
+                    write!(f, "{:02x} ", chunk[index])?;
+                }
+                else
+                {
+                    write!(f, "   ")?;
+                }
+            }
+
+            write!(f, " | ")?;
+
+            for ( index, &byte ) in chunk.iter().enumerate()
+            {
+                if index == 8
+                {
+                    write!(f, " ")?;
+                }
+
+                if    byte.is_ascii_alphanumeric()
+                   || byte.is_ascii_punctuation()
+                   || byte == ' ' as u8
+                {
+                    write!(f, "{}", byte as char)?;
+                }
+                else
+                {
+                    write!(f, ".")?;
+                }
+            }
+
+            for index in chunk.len()..16
+            {
+                if index == 8
+                {
+                    write!(f, " ")?;
+                }
+
+                write!(f, " ")?;
+            }
+
+            writeln!(f, " |")?;
+        }
+
+        Ok(())
+    }
+}
+
+
+
+/// Generic pointer to a buffer object.
+pub type BufferPtr = Rc<RefCell<dyn Buffer>>;
+
+
+
 /// A concrete ByteBuffer data structure.  It uses a cursor to perform reads and writes.  If a read
 /// or write would exceed the bounds of the buffer the operation will panic.
 ///
@@ -136,14 +219,14 @@ pub type ByteBufferPtr = Rc<RefCell<ByteBuffer>>;
 
 impl Buffer for ByteBuffer
 {
-    fn bytes(&self) -> &[u8]
+    fn byte_ptr(&self) -> *const c_void
     {
-        &self.buffer
+        self.buffer.as_ptr() as *const c_void
     }
 
-    fn bytes_mut(&mut self) -> &mut [u8]
+    fn byte_ptr_mut(&mut self) -> *mut c_void
     {
-        &mut self.buffer
+        self.buffer.as_mut_ptr() as *mut c_void
     }
 
     fn resize(&mut self, new_size: usize)
@@ -164,6 +247,11 @@ impl Buffer for ByteBuffer
     fn position(&self) -> usize
     {
         self.current_position
+    }
+
+    fn position_ptr_mut(&mut self) -> *mut c_void
+    {
+        &mut self.current_position as *mut usize as *mut c_void
     }
 
     fn set_position(&mut self, position: usize)
@@ -342,6 +430,7 @@ impl Buffer for ByteBuffer
 }
 
 
+/// Deep copy the byte buffer for the Value type.
 impl DeepClone for ByteBufferPtr
 {
     fn deep_clone(&self) -> Value
@@ -357,71 +446,13 @@ impl DeepClone for ByteBufferPtr
 }
 
 
-
 /// Display the byte buffer in a hex dump format.
 impl Display for ByteBuffer
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result
     {
-        // Print out the buffer in a hex dump format:
-        //
-        //           00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  | 0123456789abcdef |
-        // 00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  | ................ |
-        // 00000010  00 00 00 00 00 00                                 | ......           |
-
-        let bytes = self.bytes();
-
-        writeln!(f,
-               "          00 01 02 03 04 05 06 07  08 09 0a 0b 0c 0d 0e 0f  | 0123456789abcdef |")?;
-
-        for ( chunk_index, chunk ) in bytes.chunks(16).enumerate()
-        {
-            let offset = chunk_index * 16;
-
-            write!(f, "{:08x}  ", offset)?;
-
-            for index in 0..16
-            {
-                if index == 8
-                {
-                    write!(f, " ")?;
-                }
-
-                if index < chunk.len()
-                {
-                    write!(f, "{:02x} ", chunk[index])?;
-                }
-                else
-                {
-                    write!(f, "   ")?;
-                }
-            }
-
-            write!(f, " | ")?;
-
-            for &byte in chunk
-            {
-                if    byte.is_ascii_alphanumeric()
-                   || byte.is_ascii_punctuation()
-                   || byte == ' ' as u8
-                {
-                    write!(f, "{}", byte as char)?;
-                }
-                else
-                {
-                    write!(f, ".")?;
-                }
-            }
-
-            for _ in chunk.len()..16
-            {
-                write!(f, " ")?;
-            }
-
-            writeln!(f, " |")?;
-        }
-
-        Ok(())
+        let buffer = self as &dyn Buffer;
+        write!(f, "{}", buffer)
     }
 }
 
@@ -447,5 +478,242 @@ impl ByteBuffer
     pub fn new_ptr(new_len: usize) -> ByteBufferPtr
     {
         Rc::new(RefCell::new(ByteBuffer::new(new_len)))
+    }
+}
+
+
+
+/// A concrete implementation of the Buffer trait.  This buffer is a sub-buffer of another buffer
+/// and is meant to be used to read and write data from a specific range of the parent buffer.
+pub struct SubBuffer
+{
+    /// The real backing store for this sub-buffer.
+    parent: BufferPtr,
+
+
+    /// The start location of this buffer within the parent buffer.
+    start: usize,
+
+    /// The end location of this buffer within the parent buffer.
+    end: usize,
+
+
+    /// This buffer's cursor position within it's allocated range.
+    current_position: usize
+}
+
+
+impl Buffer for SubBuffer
+{
+    fn byte_ptr(&self) -> *const c_void
+    {
+        let position = self.parent.borrow().position();
+
+        self.parent.borrow_mut().set_position(self.start);
+        let ptr = self.parent.borrow().byte_ptr();
+        self.parent.borrow_mut().set_position(position);
+
+        ptr
+    }
+
+    fn byte_ptr_mut(&mut self) -> *mut c_void
+    {
+        let position = self.parent.borrow().position();
+
+        self.parent.borrow_mut().set_position(self.start);
+        let ptr = self.parent.borrow_mut().byte_ptr_mut();
+        self.parent.borrow_mut().set_position(position);
+
+        ptr
+    }
+
+    fn resize(&mut self, new_size: usize)
+    {
+         let new_end = self.start + new_size;
+
+         if new_end > self.parent.borrow().len()
+         {
+             panic!("Attempted to resize a sub-buffer to a size larger than the parent buffer.");
+         }
+
+         self.end = new_end;
+    }
+
+    fn len(&self) -> usize
+    {
+        self.end - self.start
+    }
+
+    fn position(&self) -> usize
+    {
+        self.current_position
+    }
+
+    fn position_ptr_mut(&mut self) -> *mut c_void
+    {
+        let position = self.parent.borrow().position();
+
+        self.parent.borrow_mut().set_position(self.start + self.current_position);
+        let ptr = self.parent.borrow_mut().byte_ptr_mut();
+        self.parent.borrow_mut().set_position(position);
+
+        ptr
+    }
+
+    fn set_position(&mut self, position: usize)
+    {
+        if position > self.len()
+        {
+            panic!("Attempted to set position to {} in a buffer of size {}.",
+                   position,
+                   self.len());
+        }
+
+        self.current_position = position;
+    }
+
+    fn increment_position(&mut self, increment: usize)
+    {
+        self.set_position(self.current_position + increment);
+    }
+
+    fn write_int(&mut self, byte_size: usize, value: i64)
+    {
+        {
+            let mut parent = self.parent.borrow_mut();
+            let position = parent.position();
+
+            parent.set_position(self.start + self.current_position);
+            parent.write_int(byte_size, value);
+            parent.set_position(position);
+        }
+
+        self.increment_position(byte_size);
+    }
+
+    fn read_int(&mut self, byte_size: usize, is_signed: bool) -> i64
+    {
+        let value =
+            {
+                let mut parent = self.parent.borrow_mut();
+                let position = parent.position();
+
+                parent.set_position(self.start + self.current_position);
+                let value = parent.read_int(byte_size, is_signed);
+                parent.set_position(position);
+
+                value
+            };
+
+        self.increment_position(byte_size);
+
+        value
+    }
+
+    fn write_float(&mut self, byte_size: usize, value: f64)
+    {
+        {
+            let mut parent = self.parent.borrow_mut();
+            let position = parent.position();
+
+            parent.set_position(self.start + self.current_position);
+            parent.write_float(byte_size, value);
+            parent.set_position(position);
+        }
+
+        self.increment_position(byte_size);
+    }
+
+    fn read_float(&mut self, byte_size: usize) -> f64
+    {
+        let value =
+            {
+                let mut parent = self.parent.borrow_mut();
+                let position = parent.position();
+
+                parent.set_position(self.start + self.current_position);
+                let value = parent.read_float(byte_size);
+                parent.set_position(position);
+
+                value
+            };
+
+        self.increment_position(byte_size);
+
+        value
+    }
+
+    fn write_string(&mut self, max_size: usize, value: &String)
+    {
+        {
+            let mut parent = self.parent.borrow_mut();
+            let position = parent.position();
+
+            parent.set_position(self.start + self.current_position);
+            parent.write_string(max_size, value);
+            parent.set_position(position);
+        }
+
+        self.increment_position(max_size);
+    }
+
+    fn read_string(&mut self, max_size: usize) -> String
+    {
+        let value =
+            {
+                let mut parent = self.parent.borrow_mut();
+                let position = parent.position();
+
+                parent.set_position(self.start + self.current_position);
+                let value = parent.read_string(max_size);
+                parent.set_position(position);
+
+                value
+            };
+
+        self.increment_position(max_size);
+
+        value
+    }
+}
+
+
+/// Display the sub-buffer in a hex dump format.
+impl Display for SubBuffer
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result
+    {
+        let buffer = self as &dyn Buffer;
+        write!(f, "{}", buffer)
+    }
+}
+
+
+impl SubBuffer
+{
+    /// Create a new sub-buffer from a parent buffer with a specified range inside of that buffer.
+    fn new(parent: BufferPtr, start: usize, end: usize) -> SubBuffer
+    {
+        let parent_len = parent.borrow().len();
+
+        if    start > parent_len
+           || end > parent_len
+        {
+            panic!("Attempted to create a sub-buffer with a range outside of the parent buffer.");
+        }
+
+        SubBuffer
+            {
+                parent,
+                start,
+                end,
+                current_position: 0
+            }
+    }
+
+    /// Create a new sub-buffer ptr from a parent buffer within a specified range.
+    fn new_ptr(parent: BufferPtr, start: usize, end: usize) -> BufferPtr
+    {
+        Rc::new(RefCell::new(SubBuffer::new(parent, start, end)))
     }
 }
