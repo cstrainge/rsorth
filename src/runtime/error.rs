@@ -1,6 +1,7 @@
 
 use std::{ error::Error,
-           fmt::{ self, Debug, Display, Formatter } };
+           process::Termination,
+           fmt::{ self, Debug, Display, Formatter }, process::ExitCode };
 use crate::{ runtime::interpreter::CallStack,
              lang::source_buffer::SourceLocation };
 
@@ -29,6 +30,18 @@ pub struct ScriptError
 
 impl Error for ScriptError
 {
+}
+
+
+/// When returned from main, convert the error result to an operating system exit code.
+impl Termination for ScriptError
+{
+    /// Because this type represents an error, the exit code is always FAILURE.
+    fn report(self) -> ExitCode
+    {
+        eprintln!("Error: {}", self);
+        ExitCode::FAILURE
+    }
 }
 
 
