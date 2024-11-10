@@ -1,12 +1,10 @@
-
 use std::{ borrow::Cow,
            cell::RefCell,
            collections::HashMap,
            ffi::CStr,
            os::raw::{ c_char,
                       c_void },
-           rc::Rc,
-           sync::Arc };
+           rc::Rc };
 use libffi::{ low::{ ffi_abi_FFI_DEFAULT_ABI,
                      ffi_cif,
                      ffi_type,
@@ -17,13 +15,14 @@ use libffi::{ low::{ ffi_abi_FFI_DEFAULT_ABI,
 use libloading::{ Library,
                   Symbol };
 use crate::{ add_native_word,
-             runtime::{ data_structures::{ byte_buffer::{ Buffer,
+             runtime::{ data_structures::{ byte_buffer::{ BufferPtr,
                                                           ByteBuffer },
                                            dictionary::{ WordRuntime,
                                                          WordType,
                                                          WordVisibility },
                                            value::{ ToValue,
-                                                    Value } },
+                                                    Value },
+                                           value_vec::ValueVec },
                         error::{ self,
                                  script_error,
                                  script_error_str },
@@ -35,26 +34,26 @@ use crate::{ add_native_word,
 type CalculatedSize = ( usize, usize );
 
 /// Conversion function from a Value to a native type.
-type ConversionFrom = Arc<dyn Fn(&mut dyn Interpreter,
+type ConversionFrom = Rc<dyn Fn(&mut dyn Interpreter,
                                 &Value,
                                 usize,
-                                &mut dyn Buffer,
-                                &mut dyn Buffer) -> error::Result<()> + Send + Sync>;
+                                &BufferPtr,
+                                &BufferPtr) -> error::Result<()> + Send + Sync>;
 
 /// Conversion function from a native type to a Value.
-type ConversionTo = Arc<dyn Fn(&mut dyn Interpreter,
+type ConversionTo = Rc<dyn Fn(&mut dyn Interpreter,
                                usize,
-                               &mut dyn Buffer) -> error::Result<Value> + Send + Sync>;
+                               &BufferPtr) -> error::Result<Value> + Send + Sync>;
 
 /// Calculate the size of a type and any extra space needed for referenced data.  For example, a
 /// string type would take up the space for a pointer to the string data, and the string data itself
 /// plus it's null terminator lives in the extra buffer.
-type ConversionSize = Arc<dyn Fn(&mut dyn Interpreter,
+type ConversionSize = Rc<dyn Fn(&mut dyn Interpreter,
                                  usize,
                                  &Value) -> error::Result<CalculatedSize> + Send + Sync>;
 
 // Calculate the base size of a type without any extra space needed for referenced data.
-type BaseSize = Arc<dyn Fn(usize) -> usize + Send + Sync>;
+type BaseSize = Rc<dyn Fn(usize) -> usize + Send + Sync>;
 
 
 
@@ -63,12 +62,29 @@ type BaseSize = Arc<dyn Fn(usize) -> usize + Send + Sync>;
 #[derive(Clone)]
 struct TypeInfo
 {
+    /// The libffi type for this type record.
     ffi_type: *mut ffi_type,
+
+    /// The name of the type as registered with the ffi interface.
     name: String,
 
+
+    /// The function that converts from a Value to a native type.  Can fail if the Value is not of
+    /// the correct type.
     conversion_from: ConversionFrom,
+
+    // The function that converts from a native type to a Value.
     conversion_to: ConversionTo,
+
+    /// The function that calculates the size of the type including any extra space needed for
+    /// any pointers to referenced data.  A Value is passed in to allow for the calculation of
+    /// variable sized type data.  Primarily used for calculating the size of data being passed to a
+    /// foreign function.
     conversion_size: ConversionSize,
+
+    /// The function that calculates just the size of the type without the extra space needed for
+    /// referenced data.  This doesn't allow for variable sized type data.  Primarily used for
+    /// calculating the size of data being returned from a foreign function.
     base_size: BaseSize
 }
 
@@ -78,8 +94,8 @@ struct TypeInfo
 /// libraries.
 pub struct FfiInterface
 {
-    libs: HashMap<String, Arc<RefCell<Library>>>,
-    types: HashMap<String, Arc<TypeInfo>>
+    libs: HashMap<String, Rc<RefCell<Library>>>,
+    types: HashMap<String, Rc<RefCell<TypeInfo>>>
 }
 
 
@@ -103,40 +119,40 @@ impl FfiInterface
     }
 
     /// Create the default type information for the ffi interface.
-    fn default_types() -> HashMap<String, Arc<TypeInfo>>
+    fn default_types() -> HashMap<String, Rc<RefCell<TypeInfo>>>
     {
         HashMap::from_iter(vec![
             (
                 "ffi.void".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.void".to_string(),
                     ffi_type: &raw mut types::void,
-                    conversion_from: Arc::new(|_interpreter, _value, _align, _buffer, _extra|
+                    conversion_from: Rc::new(|_interpreter, _value, _align, _buffer, _extra|
                     {
                         Ok(())
                     }),
-                    conversion_to: Arc::new(|_interpreter, _align, _buffer|
+                    conversion_to: Rc::new(|_interpreter, _align, _buffer|
                     {
                         Ok(Value::None)
                     }),
-                    conversion_size: Arc::new(|_interpreter, _align, _value|
+                    conversion_size: Rc::new(|_interpreter, _align, _value|
                     {
                         Ok(( 0, 0 ))
                     }),
-                    base_size: Arc::new(|_align|
+                    base_size: Rc::new(|_align|
                     {
                         0
                     })
-                })
+                }))
             ),
             (
                 "ffi.bool".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.bool".to_string(),
                     ffi_type: &raw mut types::uint8,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                           value,
@@ -144,29 +160,29 @@ impl FfiInterface
                                                           size_of::<bool>(),
                                                           buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<bool>(), false, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<bool>(), align);
                         Ok(( size_of::<bool>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<bool>(), align);
                         size_of::<bool>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.i8".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.i8".to_string(),
                     ffi_type: &raw mut types::sint8,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                           value,
@@ -174,29 +190,29 @@ impl FfiInterface
                                                           size_of::<i8>(),
                                                           buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<i8>(), true, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<i8>(), align);
                         Ok(( size_of::<i8>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<i8>(), align);
                         size_of::<i8>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.u8".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.u8".to_string(),
                     ffi_type: &raw mut types::uint8,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -204,29 +220,29 @@ impl FfiInterface
                                                         size_of::<u8>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<u8>(), false, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<u8>(), align);
                         Ok(( size_of::<u8>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<u8>(), align);
                         size_of::<u8>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.i16".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.i16".to_string(),
                     ffi_type: &raw mut types::sint16,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -234,29 +250,29 @@ impl FfiInterface
                                                         size_of::<i16>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<i16>(), true, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<i16>(), align);
                         Ok(( size_of::<i16>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<i16>(), align);
                         size_of::<i16>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.u16".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.u16".to_string(),
                     ffi_type: &raw mut types::uint16,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                           value,
@@ -264,29 +280,29 @@ impl FfiInterface
                                                           size_of::<u16>(),
                                                           buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<u16>(), false, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<u16>(), align);
                         Ok(( size_of::<u16>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<u16>(), align);
                         size_of::<u16>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.i32".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.i32".to_string(),
                     ffi_type: &raw mut types::sint32,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -294,29 +310,29 @@ impl FfiInterface
                                                         size_of::<i32>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<i32>(), true, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<i32>(), align);
                         Ok(( size_of::<i32>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<i32>(), align);
                         size_of::<i32>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.u32".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.u32".to_string(),
                     ffi_type: &raw mut types::uint32,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -324,29 +340,29 @@ impl FfiInterface
                                                         size_of::<u32>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<u32>(), false, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<u32>(), align);
                         Ok(( size_of::<u32>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<u32>(), align);
                         size_of::<u32>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.i64".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.i64".to_string(),
                     ffi_type: &raw mut types::sint64,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -354,29 +370,29 @@ impl FfiInterface
                                                         size_of::<i64>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<i64>(), true, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<i64>(), align);
                         Ok(( size_of::<i64>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<i64>(), align);
                         size_of::<i64>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.u64".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.u64".to_string(),
                     ffi_type: &raw mut types::uint64,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_int(interpreter,
                                                         value,
@@ -384,29 +400,29 @@ impl FfiInterface
                                                         size_of::<u64>(),
                                                         buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_int(align, size_of::<u64>(), false, buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<u64>(), align);
                         Ok(( size_of::<u64>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<u64>(), align);
                         size_of::<u64>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.f32".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.f32".to_string(),
                     ffi_type: &raw mut types::float,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_float(interpreter,
                                                           value,
@@ -414,29 +430,29 @@ impl FfiInterface
                                                           size_of::<f32>(),
                                                           buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_float(align, size_of::<f32>(), buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<f32>(), align);
                         Ok(( size_of::<f32>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<f32>(), align);
                         size_of::<f32>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.f64".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.f64".to_string(),
                     ffi_type: &raw mut types::double,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, _extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, _extra|
                     {
                         FfiInterface::conversion_to_float(interpreter,
                                                           value,
@@ -444,29 +460,29 @@ impl FfiInterface
                                                           size_of::<f64>(),
                                                           buffer)
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         FfiInterface::conversion_from_float(align, size_of::<f64>(), buffer)
                     }),
-                    conversion_size: Arc::new(|_interpreter, align, _value|
+                    conversion_size: Rc::new(|_interpreter, align, _value|
                     {
                         let padding = FfiInterface::alignment(size_of::<f64>(), align);
                         Ok(( size_of::<f64>() + padding, 0 ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(size_of::<f64>(), align);
                         size_of::<f64>() + padding
                     })
-                })
+                }))
             ),
             (
                 "ffi.string".to_string(),
-                Arc::new(TypeInfo
+                Rc::new(RefCell::new(TypeInfo
                 {
                     name: "ffi.string".to_string(),
                     ffi_type: &raw mut types::pointer,
-                    conversion_from: Arc::new(|interpreter, value, align, buffer, extra|
+                    conversion_from: Rc::new(|interpreter, value, align, buffer, extra|
                     {
                         if !value.is_string()
                         {
@@ -481,19 +497,21 @@ impl FfiInterface
                         let str_size = string.len();
                         let str_padding = FfiInterface::alignment(str_size, align);
 
-                        buffer.write_int(ptr_size, extra.position_ptr_mut() as i64);
-                        buffer.increment_position(ptr_padding);
-                        extra.write_string(str_size + str_padding, &string);
+                        buffer.borrow_mut().write_int(ptr_size,
+                                                      extra.borrow_mut().position_ptr_mut() as i64);
+                        buffer.borrow_mut().increment_position(ptr_padding);
+
+                        extra.borrow_mut().write_string(str_size + str_padding, &string);
 
                         Ok(())
                     }),
-                    conversion_to: Arc::new(|_interpreter, align, buffer|
+                    conversion_to: Rc::new(|_interpreter, align, buffer|
                     {
                         let padding = FfiInterface::alignment(size_of::<*const c_char>(), align);
-                        let raw_ptr = buffer.read_int(size_of::<*const c_char>(),
-                                                      false) as *const c_char;
+                        let raw_ptr = buffer.borrow_mut().read_int(size_of::<*const c_char>(),
+                                                                   false) as *const c_char;
 
-                        buffer.increment_position(padding);
+                        buffer.borrow_mut().increment_position(padding);
 
                         let string = match unsafe { CStr::from_ptr(raw_ptr).to_string_lossy() }
                             {
@@ -501,11 +519,11 @@ impl FfiInterface
                                 Cow::Owned(string) => string
                             };
 
-                        buffer.increment_position(string.len() + 1);
+                        buffer.borrow_mut().increment_position(string.len() + 1);
 
                         Ok(string.to_value())
                     }),
-                    conversion_size: Arc::new(|interpreter, align, value|
+                    conversion_size: Rc::new(|interpreter, align, value|
                     {
                         if !value.is_string()
                         {
@@ -519,12 +537,12 @@ impl FfiInterface
 
                         Ok(( size_of::<*const c_void>() + ptr_padding, string_len + string_padding ))
                     }),
-                    base_size: Arc::new(|align|
+                    base_size: Rc::new(|align|
                     {
                         let padding = FfiInterface::alignment(2, align);
                         size_of::<*const c_void>() + padding
                     })
-                })
+                }))
             )
         ])
     }
@@ -543,7 +561,7 @@ impl FfiInterface
                          value: &Value,
                          align: usize,
                          size: usize,
-                         buffer: &mut dyn Buffer) -> error::Result<()>
+                         buffer: &BufferPtr) -> error::Result<()>
     {
         let padding = FfiInterface::alignment(size, align);
 
@@ -552,8 +570,8 @@ impl FfiInterface
             return script_error_str(interpreter, "Value is not numeric.");
         }
 
-        buffer.write_int(size, value.get_int_val());
-        buffer.increment_position(padding);
+        buffer.borrow_mut().write_int(size, value.get_int_val());
+        buffer.borrow_mut().increment_position(padding);
 
         Ok(())
     }
@@ -562,13 +580,13 @@ impl FfiInterface
     fn conversion_from_int(align: usize,
                            size: usize,
                            is_signed: bool,
-                           buffer: &mut dyn Buffer) -> error::Result<Value>
+                           buffer: &BufferPtr) -> error::Result<Value>
     {
         let padding = FfiInterface::alignment(size, align);
 
-        let value = buffer.read_int(size, is_signed);
+        let value = buffer.borrow_mut().read_int(size, is_signed);
 
-        buffer.increment_position(padding);
+        buffer.borrow_mut().increment_position(padding);
         Ok(value.to_value())
     }
 
@@ -577,7 +595,7 @@ impl FfiInterface
                            value: &Value,
                            align: usize,
                            size: usize,
-                           buffer: &mut dyn Buffer) -> error::Result<()>
+                           buffer: &BufferPtr) -> error::Result<()>
     {
         let padding = FfiInterface::alignment(size, align);
 
@@ -586,8 +604,8 @@ impl FfiInterface
             return script_error_str(interpreter, "Value is not numeric.");
         }
 
-        buffer.write_float(size, value.get_float_val());
-        buffer.increment_position(padding);
+        buffer.borrow_mut().write_float(size, value.get_float_val());
+        buffer.borrow_mut().increment_position(padding);
 
         Ok(())
     }
@@ -595,13 +613,13 @@ impl FfiInterface
     /// Convert from a native floating point type to a floating point Value.
     fn conversion_from_float(align: usize,
                              size: usize,
-                             buffer: &mut dyn Buffer) -> error::Result<Value>
+                             buffer: &BufferPtr) -> error::Result<Value>
     {
         let padding = FfiInterface::alignment(size, align);
 
-        let value = buffer.read_float(size);
+        let value = buffer.borrow_mut().read_float(size);
 
-        buffer.increment_position(padding);
+        buffer.borrow_mut().increment_position(padding);
         Ok(value.to_value())
     }
 }
@@ -611,7 +629,7 @@ impl FfiInterface
 struct FfiWord
 {
     /// The library that contains the function.
-    library: Arc<RefCell<Library>>,
+    library: Rc<RefCell<Library>>,
 
 
     /// The name of the library.
@@ -622,10 +640,10 @@ struct FfiWord
 
 
     /// The types of the arguments to the function.
-    arg_types: Vec<Arc<TypeInfo>>,
+    arg_types: Vec<Rc<RefCell<TypeInfo>>>,
 
     /// The function's return type.
-    return_type: Arc<TypeInfo>,
+    return_type: Rc<RefCell<TypeInfo>>,
 
 
     /// The alignment of the function's arguments and return value.
@@ -668,11 +686,11 @@ impl FnOnce<( &mut dyn Interpreter, )> for FfiWord
 impl FfiWord
 {
     /// Create a new FfiWord handler.
-    pub fn new(library: Arc<RefCell<Library>>,
+    pub fn new(library: Rc<RefCell<Library>>,
                library_name: String,
                function_name: String,
-               arg_types: Vec<Arc<TypeInfo>>,
-               return_type: Arc<TypeInfo>) -> FfiWord
+               arg_types: Vec<Rc<RefCell<TypeInfo>>>,
+               return_type: Rc<RefCell<TypeInfo>>) -> FfiWord
     {
         FfiWord
             {
@@ -704,15 +722,17 @@ impl FfiWord
 
         // Allocate the buffers for the parameters and populate them.  We also get the array of
         // pointers to the parameters.
-        let mut buffer = ByteBuffer::new(0);
-        let mut extra_buffer = ByteBuffer::new(0);
+        let buffer: BufferPtr = ByteBuffer::new_ptr(0);
+        let extra_buffer: BufferPtr = ByteBuffer::new_ptr(0);
 
         let mut param_value_ptrs = self.get_param_value_ptrs(interpreter,
-                                                             &mut buffer,
-                                                             &mut extra_buffer)?;
+                                                             &buffer,
+                                                             &extra_buffer)?;
 
         // Allocate the buffer for the return value.
-        let mut return_buffer = ByteBuffer::new((self.return_type.base_size)(self.alignment));
+        let return_buffer =
+                         ByteBuffer::new_ptr((self.return_type.borrow().base_size)(self.alignment));
+        let mut return_buffer: BufferPtr = return_buffer.clone();
 
         // Create the array of raw ffi_type pointers for creating the ffi_cif.
         let mut arg_types =
@@ -721,7 +741,7 @@ impl FfiWord
 
                 for type_info in self.arg_types.iter()
                 {
-                    arg_types.push(type_info.as_ref().ffi_type);
+                    arg_types.push(type_info.borrow().ffi_type);
                 }
 
                 arg_types
@@ -736,7 +756,7 @@ impl FfiWord
                 ffi_prep_cif(&mut cif,
                              ffi_abi_FFI_DEFAULT_ABI,
                              arg_types.len() as u32,
-                             self.return_type.ffi_type,
+                             self.return_type.borrow().ffi_type,
                              arg_types.as_mut_ptr())
             };
 
@@ -749,15 +769,15 @@ impl FfiWord
         {
             ffi_call(&mut cif,
                      code_ptr,
-                     return_buffer.byte_ptr_mut(),
+                     return_buffer.borrow_mut().byte_ptr_mut(),
                      param_value_ptrs.as_mut_ptr());
         }
 
         // Convert the return value to an interpreter Value and push it onto the data stack.  But
         // only if the return type is not void.
-        let value = (self.return_type.conversion_to)(interpreter,
-                                                     self.alignment,
-                                                     &mut return_buffer)?;
+        let value = (self.return_type.borrow().conversion_to)(interpreter,
+                                                              self.alignment,
+                                                              &mut return_buffer)?;
 
         if !value.is_none()
         {
@@ -772,8 +792,8 @@ impl FfiWord
     /// byte buffers, and return a vector of pointers to the converted values.
     fn get_param_value_ptrs(&self,
                             interpreter: &mut dyn Interpreter,
-                            buffer: &mut ByteBuffer,
-                            extra_buffer: &mut ByteBuffer) -> error::Result<Vec<*mut c_void>>
+                            buffer: &BufferPtr,
+                            extra_buffer: &BufferPtr) -> error::Result<Vec<*mut c_void>>
     {
         let args_len = self.arg_types.len();
 
@@ -789,9 +809,9 @@ impl FfiWord
         {
             let index = args_len - index - 1;
             let value = interpreter.pop()?;
-            let ( size, extra ) = (self.arg_types[index].conversion_size)(interpreter,
-                                                                          self.alignment,
-                                                                          &value)?;
+            let ( size, extra ) = (self.arg_types[index].borrow().conversion_size)(interpreter,
+                                                                                   self.alignment,
+                                                                                   &value)?;
 
             base_size += size;
             extra_size += extra;
@@ -799,17 +819,17 @@ impl FfiWord
             arg_values[index] = value;
         }
 
-        buffer.resize(base_size);
-        extra_buffer.resize(extra_size);
+        buffer.borrow_mut().resize(base_size);
+        extra_buffer.borrow_mut().resize(extra_size);
 
         for index in 0..args_len
         {
-            arg_value_ptrs.push(buffer.position_ptr_mut());
-            (self.arg_types[index].conversion_from)(interpreter,
-                                                    &arg_values[index],
-                                                    self.alignment,
-                                                    buffer,
-                                                    extra_buffer)?;
+            arg_value_ptrs.push(buffer.borrow_mut().position_ptr_mut());
+            (self.arg_types[index].borrow().conversion_from)(interpreter,
+                                                             &arg_values[index],
+                                                             self.alignment,
+                                                             buffer,
+                                                             extra_buffer)?;
         }
 
         Ok(arg_value_ptrs)
@@ -836,7 +856,7 @@ fn word_ffi_open(interpreter: &mut dyn Interpreter) -> error::Result<()>
         Ok(lib) =>
             {
                 let _ = interpreter.ffi_mut().libs.insert(register_name,
-                                                          Arc::new(RefCell::new(lib)));
+                                                          Rc::new(RefCell::new(lib)));
             },
 
         Err(error) =>
@@ -871,7 +891,7 @@ fn word_ffi_fn(interpreter: &mut dyn Interpreter) -> error::Result<()>
     }
 
     // Get the library from the ffi interface.  Then check to see if the function is in the library.
-    let lib: Arc<RefCell<Library>> = match interpreter.ffi().libs.get(&lib_name)
+    let lib: Rc<RefCell<Library>> = match interpreter.ffi().libs.get(&lib_name)
         {
             Some(lib) => lib.clone(),
             None => return script_error(interpreter, format!("Library {} is not loaded.", lib_name))
@@ -931,7 +951,7 @@ fn word_ffi_fn(interpreter: &mut dyn Interpreter) -> error::Result<()>
             {
                 for arg_type in arg_type_infos.iter()
                 {
-                    signature.push_str(&arg_type.name);
+                    signature.push_str(&arg_type.borrow().name);
                     signature.push_str(" ");
                 }
 
@@ -965,8 +985,30 @@ fn word_ffi_fn(interpreter: &mut dyn Interpreter) -> error::Result<()>
 }
 
 // Create a new structure compatible with the ffi interface.
-fn word_ffi_struct(_interpreter: &mut dyn Interpreter) -> error::Result<()>
+fn word_ffi_struct(interpreter: &mut dyn Interpreter) -> error::Result<()>
 {
+    let found_initializers = interpreter.pop_as_bool()?;
+    let _is_hidden = interpreter.pop_as_bool()?;
+    let _type_names = interpreter.pop_as_array()?;
+    let raw_field_names = interpreter.pop_as_array()?;
+    let name = interpreter.pop_as_token()?;
+
+    // Get the location of the struct definition from the name token's location.  Then convert the
+    // name token to a string.
+    let _location = name.location();
+    let _name = name.text(interpreter)?;
+
+    // Get an array of default values if they were found.  Otherwise use the default value of none.
+    let _defaults =
+        if found_initializers
+        {
+            interpreter.pop_as_array()?
+        }
+        else
+        {
+            ValueVec::new(raw_field_names.borrow().len())
+        };
+
     Ok(())
 }
 

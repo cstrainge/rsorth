@@ -1,4 +1,3 @@
-
 use std::{ cell::RefCell,
            fmt::{ self,
                   Display,
@@ -479,6 +478,10 @@ impl ByteBuffer
     {
         Rc::new(RefCell::new(ByteBuffer::new(new_len)))
     }
+
+    pub fn buffer_mut(&mut self) -> &mut Vec<u8> {
+        &mut self.buffer
+    }
 }
 
 
@@ -691,29 +694,29 @@ impl Display for SubBuffer
 
 impl SubBuffer
 {
-    /// Create a new sub-buffer from a parent buffer with a specified range inside of that buffer.
-    fn new(parent: BufferPtr, start: usize, end: usize) -> SubBuffer
-    {
-        let parent_len = parent.borrow().len();
-
-        if    start > parent_len
-           || end > parent_len
-        {
-            panic!("Attempted to create a sub-buffer with a range outside of the parent buffer.");
-        }
-
-        SubBuffer
-            {
-                parent,
-                start,
-                end,
-                current_position: 0
-            }
-    }
-
-    /// Create a new sub-buffer ptr from a parent buffer within a specified range.
-    fn new_ptr(parent: BufferPtr, start: usize, end: usize) -> BufferPtr
-    {
-        Rc::new(RefCell::new(SubBuffer::new(parent, start, end)))
-    }
+    ///// Create a new sub-buffer from a parent buffer with a specified range inside of that buffer.
+    //fn new(parent: BufferPtr, start: usize, end: usize) -> SubBuffer
+    //{
+    //    let parent_len = parent.borrow().len();
+    //
+    //    if    start > parent_len
+    //       || end > parent_len
+    //    {
+    //        panic!("Attempted to create a sub-buffer with a range outside of the parent buffer.");
+    //    }
+    //
+    //    SubBuffer
+    //        {
+    //            parent,
+    //            start,
+    //            end,
+    //            current_position: 0
+    //        }
+    //}
+    //
+    ///// Create a new sub-buffer ptr from a parent buffer within a specified range.
+    //fn new_ptr(parent: BufferPtr, start: usize, end: usize) -> BufferPtr
+    //{
+    //    Rc::new(RefCell::new(SubBuffer::new(parent, start, end)))
+    //}
 }
