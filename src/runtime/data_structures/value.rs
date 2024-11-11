@@ -1,14 +1,21 @@
 
 use std::{ cell::RefCell,
-           fmt::{ self, Display, Formatter },
-           hash::{ Hash, Hasher } };
-use crate::{ lang::{ tokenizing::{ NumberType, Token },
-                     code::{ ByteCode, pretty_print_code } },
+           fmt::{ self,
+                   Display,
+                   Formatter },
+           hash::{ Hash,
+                   Hasher } };
+use crate::{ lang::{ tokenizing::{ NumberType,
+                                   Token },
+                     code::{ ByteCode,
+                             pretty_print_code } },
              runtime::{ data_structures::{ byte_buffer::ByteBufferPtr,
                                            data_object::DataObjectPtr,
                                            value_hash::ValueHashPtr,
-                                           value_vec::{ ValueVec, ValueVecPtr } },
-                        error::{ self, script_error },
+                                           value_vec::{ ValueVec,
+                                                        ValueVecPtr } },
+                        error::{ self,
+                                 script_error },
                         interpreter::Interpreter } };
 
 
@@ -54,14 +61,12 @@ pub enum Value
 }
 
 
-
 /// Convert an arbitrary data type to a Value.
 pub trait ToValue
 {
     /// Implement to handle the actual conversion.
     fn to_value(&self) -> Value;
 }
-
 
 
 /// Convert a borrowed string into a Value.
@@ -92,7 +97,6 @@ impl Default for Value
 /// It should be noted in the user documentation that floating point Values should not be used as
 /// keys in a hash map.
 impl Eq for Value {}
-
 
 
 /// Manage equality for the Value enumeration.  This implements the various rules for value
@@ -209,7 +213,6 @@ impl Display for Value
 }
 
 
-
 /// Define implementations for converting between Values and the raw data types they represent.
 macro_rules! value_conversion
 {
@@ -268,7 +271,6 @@ macro_rules! value_conversion
 }
 
 
-
 /// Hand implement ToValue for the NumberType token enumeration.
 impl ToValue for NumberType
 {
@@ -283,7 +285,6 @@ impl ToValue for NumberType
 }
 
 
-
 /// Convenience implementation for converting a usize to a Value.  The usize type is not represented
 /// directly in the Value enumeration, so it is converted to an i64 internally.
 impl ToValue for usize
@@ -295,7 +296,6 @@ impl ToValue for usize
 }
 
 
-
 /// Convenience implementation for converting a u64 to a Value.  The u64 type is not represented
 /// directly in the Value enumeration, so it is converted to an i64 internally.
 impl ToValue for u64
@@ -305,7 +305,6 @@ impl ToValue for u64
         Value::Int(*self as i64)
     }
 }
-
 
 
 /// Used to convert a Vector of value compatible types to a ValueVec based Value.
@@ -321,7 +320,6 @@ impl<T> From<Vec<T>> for Value
 }
 
 
-
 /// Used to convert reference to a Vector of value compatible types to a ValueVec based Value.
 impl<T> From<&Vec<T>> for Value
     where
@@ -335,7 +333,6 @@ impl<T> From<&Vec<T>> for Value
 }
 
 
-
 // Implement the simple conversions for the value enumeration types.
 value_conversion!(i64,           Int,        as_int);
 value_conversion!(f64,           Float,      as_float);
@@ -347,7 +344,6 @@ value_conversion!(DataObjectPtr, DataObject, as_data_object);
 value_conversion!(ByteBufferPtr, ByteBuffer, as_byte_buffer);
 value_conversion!(Token,         Token,      as_token);
 value_conversion!(ByteCode,      Code,       as_code);
-
 
 
 /// Handily implement variant checks for the types the Value enumeration supports.
@@ -377,7 +373,6 @@ macro_rules! is_variant
         }
     };
 }
-
 
 
 impl Value
@@ -553,7 +548,6 @@ impl Value
 }
 
 
-
 impl Value
 {
     /// Convert a string to a string that could be used directly within source code.  For example,
@@ -588,7 +582,6 @@ impl Value
 }
 
 
-
 /// Implement the deep clone trait for the value enumeration and any sub-types that are handled by
 /// reference.  The normal clone() operation only clones the reference itself, not the data it
 /// contains.
@@ -596,7 +589,6 @@ pub trait DeepClone
 {
     fn deep_clone(&self) -> Value;
 }
-
 
 
 /// Implement the deep clone trait for the Value enumeration, defaulting to shallow copies for value
@@ -623,7 +615,6 @@ impl DeepClone for Value
 }
 
 
-
 thread_local!
 {
     /// Keep track of the current indentation level for pretty printing more structured values.  For
@@ -633,7 +624,6 @@ thread_local!
     /// threads.
     static VALUE_FORMAT_INDENT: RefCell<usize> = RefCell::new(0);
 }
-
 
 
 /// Get the current indentation level in spaces for pretty printing structured values.  See
