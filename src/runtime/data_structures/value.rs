@@ -101,9 +101,13 @@ impl PartialEq for Value
 {
     fn eq(&self, other: &Value) -> bool
     {
-        // If both are some kind of numbers attempt to manage the conversion.
-        if Value::both_are_numeric(self, other)
+        if Value::both_are_none(self, other)
         {
+            true
+        }
+        else if Value::both_are_numeric(self, other)
+        {
+            // If both are some kind of numbers attempt to manage the conversion.
             if Value::either_is_float(self, other)
             {
                 let a = self.get_float_val();
@@ -420,6 +424,13 @@ impl Value
                 }
             _                           => false
         }
+    }
+
+
+    /// Are both values nothing?
+    pub fn both_are_none(a: &Value, b: &Value) -> bool
+    {
+        a.is_none() && b.is_none()
     }
 
 
